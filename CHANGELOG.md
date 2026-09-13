@@ -9,6 +9,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- API versioning: all endpoints now live under `/api/v1` (URI versioning, default version `1`). Health probes (`/api/health`, `/live`, `/ready`) stay version-neutral for Docker/K8s.
+
 ### Changed
 - Moved Resume Builder-only components (editors, preview, templates, toolbar) from `frontend/src/components/` into `frontend/src/features/resume-builder/components/`; `frontend/src/components/` now holds only cross-feature shared pieces (`ErrorBoundary`, `Seo`, `Toast`, `TemplateSharedParts`)
 

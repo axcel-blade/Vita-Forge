@@ -5,7 +5,7 @@ COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 COPY frontend/ .
 # Bake the browser-facing API URL at build time (host localhost, not Docker DNS).
-ARG VITE_API_BASE_URL=http://localhost:3001/api
+ARG VITE_API_BASE_URL=http://localhost:3001/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_API_URL=$VITE_API_BASE_URL
 RUN npm run build
