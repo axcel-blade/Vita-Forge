@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Res, VERSION_NEUTRAL } from '@nestjs/common';
 import { HealthService } from './health.service';
 
-@Controller('health')
+/** Version-neutral: Docker/K8s probes hit `/api/health*` regardless of API version. */
+@Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

@@ -9,7 +9,7 @@ docker compose up --build
 ```
 
 - Frontend: http://localhost:8080
-- Backend: http://localhost:3001/api
+- Backend: http://localhost:3001/api/v1
 
 Compose waits for the backend `/api/health/live` check before starting the frontend.
 
@@ -39,7 +39,7 @@ Compose reads env vars from your shell or a root `.env` (not committed):
 ```bash
 JWT_SECRET=change-me
 CORS_ORIGINS=http://localhost:8080
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_BASE_URL=http://localhost:3001/api/v1
 ANTHROPIC_API_KEY=
 ```
 

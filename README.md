@@ -89,7 +89,7 @@ npm install
 npm run dev
 ```
 
-API at `http://localhost:3001/api`.
+API at `http://localhost:3001/api` (versioned endpoints under `/api/v1`, e.g. `/api/v1/auth`). Health checks stay unversioned at `/api/health`.
 
 Health probes:
 
@@ -135,7 +135,7 @@ docker compose up --build
 | Service  | URL |
 |----------|-----|
 | Frontend | http://localhost:8080 |
-| Backend  | http://localhost:3001/api |
+| Backend  | http://localhost:3001/api/v1 |
 | Health   | http://localhost:3001/api/health |
 
 Stop with `Ctrl+C`, or run detached:
