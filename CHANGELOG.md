@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Cursor rules for Apple (Australia) marketing UI: tokens, component states, accessibility (WCAG 2.2 AA), content tone, and guideline authoring (`.cursor/rules/frontend/apple-au-*.mdc`).
 - API versioning: all endpoints now live under `/api/v1` (URI versioning, default version `1`). Health probes (`/api/health`, `/live`, `/ready`) stay version-neutral for Docker/K8s.
 
 ### Changed

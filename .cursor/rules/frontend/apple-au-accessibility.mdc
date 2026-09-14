@@ -1,0 +1,32 @@
+---
+description: WCAG 2.2 AA, keyboard-first, and testable a11y gates for Apple AU-style UI
+globs: frontend/src/**
+alwaysApply: false
+---
+
+# Apple (Australia) accessibility
+
+Target is WCAG 2.2 AA. Interactions must be keyboard-first. Focus-visible rules are required. Contrast constraints are required. Every a11y rule must be testable in implementation.
+
+## Non-negotiable (must)
+
+- Visible `:focus-visible` ring (or equivalent) on every interactive control; do not remove outlines without a replacement that meets contrast.
+- Tab order follows visual order. No keyboard traps except modal dialogs that restore focus on close.
+- Name, role, and value expose the same meaning as the visible UI (buttons named by label, links by destination).
+- Text and UI contrast meet AA against the semantic surface token in use.
+- Disabled controls are not the only way to hide required actions; provide an enabled path or an explanation.
+
+## Recommendations (should)
+
+- Prefer native `<button>`, `<a>`, `<nav>`, lists, and headings over clickable `<div>`.
+- Keep motion at or under `motion.duration.normal`; honor `prefers-reduced-motion` by skipping non-essential animation.
+
+## Acceptance criteria (pass/fail)
+
+| Check | Pass | Fail |
+|-------|------|------|
+| Keyboard | All actions reachable and operable without a pointer | Hover-only or mouse-only controls |
+| Focus | Focus-visible on Tab | `outline: none` with no replacement |
+| Contrast | AA for text ≥ `font.size.xs` on that surface | Dark gray (`text.secondary`) on black (`surface.base`) |
+| Labels | Unique, descriptive action text | “Click here”, icon-only with no accessible name |
+| States | Disabled/loading/error announced or textually visible | Spinner with no accessible name |
