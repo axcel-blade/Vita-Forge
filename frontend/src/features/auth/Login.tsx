@@ -3,7 +3,7 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../services/auth-context';
 import './login.css';
 
@@ -12,9 +12,11 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/apps/resume-builder';
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -30,9 +32,8 @@ export function LoginPage() {
     
     try {
       await login({ email, password });
-      
-      // Redirect to dashboard or main app after successful login
-      navigate('/apps/resume-builder', { replace: true });
+
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);

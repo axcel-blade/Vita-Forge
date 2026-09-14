@@ -5,6 +5,8 @@ description: Runs and updates NestJS Jest tests under backend/. Use when adding 
 
 # VitaForge backend tests
 
+Starting new backend work? Use `vitaforge-feature-branch` first if you're still on `develop`/`main`.
+
 ## Run
 
 From `backend/`:

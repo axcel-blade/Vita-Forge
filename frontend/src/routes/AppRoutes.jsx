@@ -4,6 +4,7 @@ import React, { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Seo from "../components/Seo";
+import ProtectedRoute from "../components/ProtectedRoute";
 import { SITE_NAME, SITE_URL } from "../constants/seo";
 import { LoginPage, RegisterPage } from "../features/auth";
 
@@ -17,8 +18,8 @@ const Templates = lazy(() => import("../features/resume-builder/pages/Templates"
 const Preview = lazy(() => import("../features/resume-builder/pages/Preview"));
 const CoverLetterHome = lazy(() => import("../features/cover-letter/pages/CoverLetterHome"));
 
-function withSeo(PageComponent, seoProps) {
-  return (
+function withSeo(PageComponent, seoProps, { protected: isProtected = false } = {}) {
+  const page = (
     <>
       <Seo {...seoProps} />
       <Suspense fallback={<RouteLoadingFallback />}>
@@ -26,6 +27,8 @@ function withSeo(PageComponent, seoProps) {
       </Suspense>
     </>
   );
+
+  return isProtected ? <ProtectedRoute>{page}</ProtectedRoute> : page;
 }
 
 function RouteLoadingFallback() {
@@ -153,7 +156,7 @@ export default function AppRoutes() {
                 },
               ],
             },
-          })}
+          }, { protected: true })}
         />
         <Route
           path="/apps/resume-builder/templates"
@@ -163,7 +166,7 @@ export default function AppRoutes() {
             description:
               "Browse resume templates and pick a professional, ATS-friendly layout for your job applications.",
             type: "article",
-          })}
+          }, { protected: true })}
         />
         <Route
           path="/apps/resume-builder/preview"
@@ -173,7 +176,7 @@ export default function AppRoutes() {
             description:
               "Preview your resume in an A4 format before export to ensure clean, recruiter-ready presentation.",
             type: "article",
-          })}
+          }, { protected: true })}
         />
         <Route
           path="/apps/cover-letter"
@@ -196,7 +199,7 @@ export default function AppRoutes() {
                 },
               ],
             },
-          })}
+          }, { protected: true })}
         />
         <Route
           path="*"
