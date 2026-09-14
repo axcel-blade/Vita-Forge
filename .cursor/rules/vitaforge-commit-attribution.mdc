@@ -1,0 +1,6 @@
+---
+description: Commit and PR attribution policy for VitaForge
+alwaysApply: true
+---
+
+- Do not add an AI/bot co-author trailer (e.g. `Co-Authored-By: Claude ...`, `Co-Authored-By: Cursor ...`) to commits or PR descriptions.

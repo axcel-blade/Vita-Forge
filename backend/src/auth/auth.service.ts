@@ -19,7 +19,7 @@ export interface AuthTokenResponse {
 }
 
 export interface CurrentUserResponse {
-  userId: string;
+  id: string;
   email: string;
   name: string;
   avatar: string | null;
@@ -82,7 +82,7 @@ export class AuthService {
   async getMe(authorization?: string): Promise<CurrentUserResponse> {
     const user = await this.resolveUser(this.extractBearerToken(authorization), 'access');
     return {
-      userId: user.id,
+      id: user.id,
       email: user.email,
       name: user.name || 'Demo User',
       avatar: null,

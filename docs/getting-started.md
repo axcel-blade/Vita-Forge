@@ -34,7 +34,7 @@ npm run dev
 ```
 
 UI: `http://localhost:5173`  
-API: `http://localhost:3001/api`
+API: `http://localhost:3001/api/v1`
 
 ## Project Structure
 
@@ -94,9 +94,9 @@ docker compose up --build
 ```
 
 - UI: http://localhost:8080  
-- API: http://localhost:3001/api  
+- API: http://localhost:3001/api/v1  
 
-Optional Postgres: `docker compose --profile db up --build -d`. See the root [README.md](../README.md#docker) for details.
+Optional Postgres: `docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up --build -d`. See the root [README.md](../README.md#docker) for details.
 
 ## Configuration
 

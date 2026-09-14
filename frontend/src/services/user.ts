@@ -16,7 +16,7 @@ export interface SyncedProfile {
 
 export interface UserProfileResponse {
   user: {
-    userId: string;
+    id: string;
     email: string;
     name: string;
   };

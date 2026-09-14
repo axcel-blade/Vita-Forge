@@ -1,0 +1,15 @@
+# Optional Postgres overlay for Vita Forge.
+# Usage (from repo root):
+#   docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up --build
+#
+# Points the API at the compose postgres service and waits for it to be healthy.
+# The backend entrypoint runs `prisma migrate deploy` when DATABASE_URL is set.
+
+services:
+  backend:
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://vita:vita@postgres:5432/vitaforge}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true

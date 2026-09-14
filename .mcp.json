@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "vitaforge-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${workspaceFolder}/docs",
+        "${workspaceFolder}/wiki"
+      ]
+    }
+  }
+}

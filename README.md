@@ -89,7 +89,7 @@ npm install
 npm run dev
 ```
 
-API at `http://localhost:3001/api`.
+API at `http://localhost:3001/api` (versioned endpoints under `/api/v1`, e.g. `/api/v1/auth`). Health checks stay unversioned at `/api/health`.
 
 Health probes:
 
@@ -100,7 +100,7 @@ curl http://localhost:3001/api/health/ready
 
 **Database (optional)**
 
-Uncomment `DATABASE_URL` in `backend/.env`, then:
+Set `DATABASE_URL` in `backend/.env` (leave blank for the in-memory store), then:
 
 ```bash
 cd backend
@@ -135,7 +135,7 @@ docker compose up --build
 | Service  | URL |
 |----------|-----|
 | Frontend | http://localhost:8080 |
-| Backend  | http://localhost:3001/api |
+| Backend  | http://localhost:3001/api/v1 |
 | Health   | http://localhost:3001/api/health |
 
 Stop with `Ctrl+C`, or run detached:
@@ -147,18 +147,13 @@ docker compose down
 
 **Optional Postgres**
 
-```bash
-docker compose --profile db up --build -d
-```
-
-Then point the API at the container (example):
+Wire the API to Compose Postgres and run migrations on startup:
 
 ```bash
-set DATABASE_URL=postgresql://vita:vita@postgres:5432/vitaforge
-docker compose up --build -d
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up --build -d
 ```
 
-On PowerShell use `$env:DATABASE_URL="postgresql://vita:vita@postgres:5432/vitaforge"` before `docker compose up`.
+Default DB URL: `postgresql://vita:vita@postgres:5432/vitaforge` (override with `DATABASE_URL` / `POSTGRES_*`).
 
 **Useful flags**
 
@@ -171,7 +166,7 @@ docker compose logs -f backend
 docker compose logs -f frontend
 ```
 
-Image definitions live under `docker/`. Compose file is `docker-compose.yml` at the repo root.
+Image definitions live under `docker/`. Compose files are `docker-compose.yml` and optional `docker-compose.db.yml` at the repo root.
 
 ## Where the code lives
 

@@ -10,6 +10,7 @@
 
 import React from "react";
 import AppRoutes from "./routes/AppRoutes";
+import { ToastContainer } from "./components/Toast";
 
 /**
  * App Component
@@ -17,5 +18,10 @@ import AppRoutes from "./routes/AppRoutes";
  */
 export default function App() {
   // Render the routing system which handles navigation between apps
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      <ToastContainer />
+    </>
+  );
 }

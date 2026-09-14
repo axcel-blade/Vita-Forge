@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-`http://localhost:5173` — API base defaults to `http://localhost:3001/api`.
+`http://localhost:5173` — API base defaults to `http://localhost:3001/api/v1`.
 
 ## Scripts
 

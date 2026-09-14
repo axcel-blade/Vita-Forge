@@ -2,7 +2,7 @@
 
 Public probes for the Nest backend (no auth).
 
-Global prefix: `/api`.
+Global prefix: `/api`. Health routes are version-neutral (no `/v1`) so Docker/K8s probes stay stable across API versions; all other endpoints live under `/api/v1`.
 
 ## Endpoints
 

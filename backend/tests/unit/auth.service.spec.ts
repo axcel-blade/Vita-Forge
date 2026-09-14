@@ -101,6 +101,8 @@ describe('AuthService', () => {
 
       expect(result.email).toBe('test@example.com');
       expect(result.name).toBe('Test User');
+      expect(result.id).toEqual(expect.any(String));
+      expect(result).not.toHaveProperty('userId');
     });
 
     it('rejects a missing token', async () => {

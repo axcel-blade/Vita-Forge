@@ -1,4 +1,4 @@
-/* src/apps/resume-builder/pages/Preview.jsx */
+/* src/features/resume-builder/pages/Preview.jsx */
 
 import React from "react";
 

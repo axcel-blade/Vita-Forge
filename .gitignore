@@ -29,9 +29,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# CLAUDE AI
-.claude/
-CLAUDE.md
+# Claude Code — local-only files (shared config in .claude/agents, .claude/skills, .claude/hooks, .claude/settings.json is tracked)
+.claude/launch.json
+.claude/settings.local.json
 
 # TypeScript incremental build caches
 *.tsbuildinfo

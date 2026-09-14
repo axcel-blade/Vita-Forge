@@ -1,0 +1,23 @@
+---
+description: Standard markdown documentation files and their purpose for VitaForge
+alwaysApply: false
+---
+
+| File | Purpose |
+|------|---------|
+| `README.md` | Main project description shown on repo homepage |
+| `CONTRIBUTING.md` | Contribution guidelines |
+| `LICENSE` | License information |
+| `CODE_OF_CONDUCT.md` | Community rules |
+| `SECURITY.md` | Security policy and vulnerability reporting |
+| `SUPPORT.md` | How users can get help |
+| `CHANGELOG.md` | Version history and updates |
+| `TODO.md` | Task tracking |
+| `ROADMAP.md` | Future plans/features |
+| `docs/*.md` | Documentation pages |
+| `wiki/*.md` | GitHub Wiki pages |
+| `.github/ISSUE_TEMPLATE/*.md` | Issue templates |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Pull request template |
+| `.github/DISCUSSION_TEMPLATE/*.md` | Discussion templates |
+
+When code changes affect any of the above (new feature, behavior change, version bump), update the relevant markdown files in the same change — most commonly `CHANGELOG.md` and `README.md`.

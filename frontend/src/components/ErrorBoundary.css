@@ -1,0 +1,30 @@
+/* src/components/ErrorBoundary.css */
+
+.error-boundary {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-boundary h1 {
+  font-size: 2.5rem;
+  color: #991b1b;
+  margin-bottom: 0.5rem;
+}
+
+.error-boundary p {
+  font-size: 1.2rem;
+  color: #7f1d1d;
+  max-width: 60ch;
+}
+
+.error-boundary button,
+.error-boundary a {
+  min-height: 48px;
+}

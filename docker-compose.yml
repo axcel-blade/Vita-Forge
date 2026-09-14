@@ -1,7 +1,9 @@
 # Vita Forge Compose stack (v0.8.0)
-# Frontend :8080 → nginx; backend :3001 → Nest. Postgres is opt-in via --profile db.
+# Frontend :8080 → nginx; backend :3001 → Nest. Postgres and Redis are opt-in via --profile db
+# (or: docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up).
 services:
   backend:
+    container_name: backend
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
@@ -11,25 +13,35 @@ services:
       PORT: "3001"
       JWT_SECRET: ${JWT_SECRET:-vita-forge-secret-key-change-in-production}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173}
-      # Leave unset for in-memory store. Set DATABASE_URL to use Postgres.
+      # Leave unset for in-memory store. Set DATABASE_URL (or use docker-compose.db.yml) for Postgres.
       DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    # Starts when postgres/redis are up under --profile db; ignored when they are not running.
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
     # Liveness only — readiness (/ready) can 503 when Postgres is misconfigured.
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/api/health/live"]
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 15s
+      start_period: 40s
     restart: unless-stopped
 
   frontend:
+    container_name: frontend
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
         # Browser calls the host-mapped API, not the Docker service DNS name.
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api/v1}
     ports:
       - "8080:80"
     depends_on:
@@ -45,6 +57,7 @@ services:
 
   # Optional: docker compose --profile db up
   postgres:
+    container_name: postgres
     profiles: ["db"]
     image: postgres:16-alpine
     environment:
@@ -62,5 +75,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Optional: docker compose --profile db up
+  redis:
+    container_name: redis
+    profiles: ["db"]
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - vitaforge_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   vitaforge_pg:
+  vitaforge_redis:

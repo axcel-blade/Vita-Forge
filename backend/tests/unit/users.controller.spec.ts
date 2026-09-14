@@ -14,12 +14,12 @@ describe('UsersController', () => {
 
   beforeEach(() => {
     usersService = {
-      getProfile: jest.fn().mockResolvedValue({ user: { userId: '1' }, profile: null }),
-      upsertProfile: jest.fn().mockResolvedValue({ user: { userId: '1' }, profile: { resume: {} } }),
+      getProfile: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: null }),
+      upsertProfile: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resume: {} } }),
       deleteProfile: jest.fn().mockResolvedValue(undefined),
       listVersions: jest.fn().mockResolvedValue([]),
       createVersion: jest.fn().mockResolvedValue({ id: 'v1', label: null, createdAt: new Date().toISOString() }),
-      restoreVersion: jest.fn().mockResolvedValue({ user: { userId: '1' }, profile: { resume: {} } }),
+      restoreVersion: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resume: {} } }),
     };
     controller = new UsersController(usersService as unknown as UsersService);
   });

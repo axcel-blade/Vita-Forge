@@ -1,0 +1,38 @@
+---
+description: Apple AU marketing UI tokens, typography, spacing, and motion for VitaForge frontend
+globs: frontend/src/**/*.{css,scss,tsx,jsx}
+alwaysApply: false
+---
+
+# Apple (Australia) foundations
+
+Reference: https://www.apple.com/au/. Audience: buyers, teams, decision-makers. Surface: marketing-style UI. Extraction confidence for brand context is low — verify copy and imagery against VitaForge, not apple.com product claims.
+
+Visual style must stay clean, functional, and implementation-oriented. Teams should prefer system consistency over local visual exceptions.
+
+## Semantic tokens (must, not raw hex/px in components)
+
+| Token | Value |
+|-------|--------|
+| `font.family.primary` | SF Pro Text |
+| `font.family.stack` | SF Pro Text, Myriad Set Pro, SF Pro Icons, Apple Legacy Chevron, Helvetica Neue, Helvetica, Arial, sans-serif |
+| `font.size.base` / `font.weight.base` / `font.lineHeight.base` | 12px / 400 / 16.0005px |
+| `font.size.xs`–`4xl` | 12, 14, 17, 19, 21, 25.5, 28, 34px |
+| `color.surface.base` | `#000000` |
+| `color.surface.muted` | `#0071e3` (accent / CTA fill) |
+| `color.surface.strong` | `#ffffff` |
+| `color.text.secondary` | `#1d1d1f` (on light surfaces only) |
+| `color.text.tertiary` | `#0066cc` (links) |
+| `color.text.inverse` | `#f5f5f7` (on dark surfaces) |
+| `space.1`–`space.8` | 3, 4, 5, 6, 8, 9, 9.6, 11px |
+| `radius.xs` / `radius.sm` | 50px / 980px |
+| `motion.duration.instant` / `fast` / `normal` | 100ms / 250ms / 320ms |
+
+Do not introduce one-off spacing or typography values. Licensed SF Pro may be unavailable; must keep the full stack so Helvetica/Arial still match metrics.
+
+## Contrast (must)
+
+- Dark canvas (`surface.base`): body and headings use `text.inverse`.
+- Light canvas (`surface.strong`): body uses `text.secondary`.
+- Links use `text.tertiary` only where contrast vs the surface meets WCAG 2.2 AA.
+- Do not place `text.secondary` on `surface.base` (fails contrast).

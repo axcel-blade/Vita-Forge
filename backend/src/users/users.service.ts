@@ -31,24 +31,24 @@ export class UsersService {
     const user = await this.authService.getMe(authorization);
     return {
       user,
-      profile: await this.store.getProfile(user.userId),
+      profile: await this.store.getProfile(user.id),
     };
   }
 
   async upsertProfile(authorization: string | undefined, profile: StoredProfile): Promise<UserProfileResponse> {
     const user = await this.authService.getMe(authorization);
-    const next = await this.store.upsertProfile(user.userId, profile);
+    const next = await this.store.upsertProfile(user.id, profile);
     return { user, profile: next };
   }
 
   async deleteProfile(authorization?: string): Promise<void> {
     const user = await this.authService.getMe(authorization);
-    await this.store.deleteProfile(user.userId);
+    await this.store.deleteProfile(user.id);
   }
 
   async listVersions(authorization?: string): Promise<ResumeVersionResponse[]> {
     const user = await this.authService.getMe(authorization);
-    const versions = await this.store.listVersions(user.userId);
+    const versions = await this.store.listVersions(user.id);
     return versions.map((version) => ({
       id: version.id,
       label: version.label,
@@ -58,11 +58,11 @@ export class UsersService {
 
   async createVersion(authorization: string | undefined, label?: string): Promise<ResumeVersionResponse> {
     const user = await this.authService.getMe(authorization);
-    const profile = await this.store.getProfile(user.userId);
+    const profile = await this.store.getProfile(user.id);
     if (!profile) {
       throw new NotFoundException('No profile to snapshot');
     }
-    const version = await this.store.createVersion(user.userId, profile, label);
+    const version = await this.store.createVersion(user.id, profile, label);
     return {
       id: version.id,
       label: version.label,
@@ -72,11 +72,11 @@ export class UsersService {
 
   async restoreVersion(authorization: string | undefined, versionId: string): Promise<UserProfileResponse> {
     const user = await this.authService.getMe(authorization);
-    const version = await this.store.getVersion(user.userId, versionId);
+    const version = await this.store.getVersion(user.id, versionId);
     if (!version) {
       throw new NotFoundException('Version not found');
     }
-    const profile = await this.store.upsertProfile(user.userId, version.payload);
+    const profile = await this.store.upsertProfile(user.id, version.payload);
     return { user, profile };
   }
 }

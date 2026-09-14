@@ -37,7 +37,7 @@ describe('AuthController', () => {
   });
 
   it('reads the current user from the Authorization header', async () => {
-    authService.getMe.mockResolvedValue({ userId: '1', email: 'a@b.com' });
+    authService.getMe.mockResolvedValue({ id: '1', email: 'a@b.com' });
 
     await controller.me('Bearer jwt-token');
     expect(authService.getMe).toHaveBeenCalledWith('Bearer jwt-token');
