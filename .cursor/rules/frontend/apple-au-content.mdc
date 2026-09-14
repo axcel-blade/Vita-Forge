@@ -1,0 +1,25 @@
+---
+description: Concise, confident, implementation-focused copy for Apple AU-style marketing UI
+globs: frontend/src/**/*.{tsx,jsx}
+alwaysApply: false
+---
+
+# Apple (Australia) content and tone
+
+Tone: concise, confident, implementation-focused. Audience is buyers, teams, and decision-makers on a marketing-style surface.
+
+## Must
+
+- Labels and actions describe the outcome (`Create resume`, `Download PDF`), never the mechanic (`Submit`, `Click here`).
+- Errors state the problem and the next step.
+- Brand claims must describe VitaForge. Do not copy Apple product names, prices, or legal copy from apple.com/au.
+
+## Should
+
+- Prefer short sentences and sentence case for body; keep CTA verbs consistent.
+- Lead with benefit, then action.
+
+```txt
+❌ Need to get started? Click here to continue the process.
+✅ Create a resume in minutes. Start for free.
+```

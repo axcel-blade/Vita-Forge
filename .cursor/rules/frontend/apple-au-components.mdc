@@ -1,0 +1,54 @@
+---
+description: Apple AU component anatomy, states, density, and interaction rules
+globs: frontend/src/**/*.{tsx,jsx,css}
+alwaysApply: false
+---
+
+# Apple (Australia) components
+
+Restate intent: marketing UI that is token-driven, consistent, and fast to implement.
+
+Every interactive component must define default, hover, focus-visible, active, disabled, loading, and error. Do not ship guidance or UI without those states.
+
+## Density (apple.com/au reference)
+
+Prefer link-led pages, then buttons and lists. Inputs, global nav, and tables are rare.
+
+| Kind | Count on reference | Implication |
+|------|-------------------|-------------|
+| links | 321 | Default navigation pattern; descriptive labels |
+| buttons | 74 | Primary CTAs use `surface.muted` + inverse text |
+| lists | 60 | Group related offers/features |
+| inputs | 2 | Forms stay short |
+| navigation | 2 | One global + one utility/footer |
+| tables | 2 | Use only for comparable specs |
+
+## Anatomy and tokens
+
+- Spacing and type must use `space.*` and `font.size.*` only.
+- Pill CTAs should use `radius.xs` or `radius.sm` (full pill).
+- Motion should use `motion.duration.instant` (feedback), `fast` (hover), `normal` (panels).
+
+## Interactions (must document all three)
+
+- Keyboard: Tab/Shift+Tab move focus; Enter/Space activate buttons; Escape closes overlays; arrows in menus.
+- Pointer: hover does not replace focus-visible; click target should stay at least the control’s padding box.
+- Touch: no hover-only affordances; hit area should not shrink below the padded control.
+
+## Responsive and edge cases (must)
+
+- Long content: wrap; do not truncate essential labels without a title/accessible name.
+- Overflow: clip decorative media; keep actions visible (wrap or stack).
+- Empty: one sentence + one labeled action; no ambiguous “OK”/“Click here”.
+- Loading: disable duplicate submits; keep accessible name; expose busy state.
+- Error: message associated with the control; recovery action labeled.
+
+```tsx
+// ❌ BAD
+<button style={{ color: '#0066cc', padding: '13px' }}>Click here</button>
+
+// ✅ GOOD
+<button className="btn-primary" aria-busy={loading} disabled={loading || disabled}>
+  {loading ? 'Saving…' : 'Save resume'}
+</button>
+```

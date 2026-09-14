@@ -1,0 +1,36 @@
+---
+description: Authoring workflow and QA checklist for Apple AU token-driven UI guidance
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Apple (Australia) guideline authoring
+
+When writing or updating UI guidance, follow this order:
+
+1. Restate design intent in one sentence.
+2. Define foundations and semantic tokens (no raw hex in component sections).
+3. Define anatomy, variants, interactions, and every required state.
+4. Add accessibility acceptance criteria with pass/fail checks.
+5. Add anti-patterns, migration notes, and edge-case handling.
+6. End with a QA checklist.
+
+Required document structure: context and goals; tokens; component rules; accessibility; content/tone with examples; anti-patterns; QA checklist.
+
+Non-negotiable rules must use “must”. Recommendations should use “should”. Accessibility rules must be testable.
+
+## Anti-patterns (must not)
+
+- Low-contrast text or hidden focus indicators
+- One-off spacing or typography
+- Ambiguous labels
+- Components without explicit state rules
+
+## QA checklist
+
+- [ ] Tokens only (no stray hex/px)
+- [ ] All seven states documented and implemented
+- [ ] Keyboard, pointer, and touch specified
+- [ ] Long/overflow/empty handled
+- [ ] WCAG 2.2 AA checks listed as pass/fail
+- [ ] Copy is descriptive and VitaForge-specific
