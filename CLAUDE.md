@@ -49,7 +49,8 @@
 | `CODE_OF_CONDUCT.md` | Community rules |
 | `SECURITY.md` | Security policy and vulnerability reporting |
 | `SUPPORT.md` | How users can get help |
-| `CHANGELOG.md` | Version history and updates |
+| `backend/CHANGELOG.md` | Backend version history and updates |
+| `frontend/CHANGELOG.md` | Frontend version history and updates |
 | `TODO.md` | Task tracking |
 | `ROADMAP.md` | Future plans/features |
 | `docs/*.md` | Documentation pages |
@@ -58,7 +59,7 @@
 | `.github/PULL_REQUEST_TEMPLATE.md` | Pull request template |
 | `.github/DISCUSSION_TEMPLATE/*.md` | Discussion templates |
 
-When code changes affect any of the above (new feature, behavior change, version bump), update the relevant markdown files in the same change — most commonly `CHANGELOG.md` and `README.md`.
+When code changes affect any of the above (new feature, behavior change, version bump), update the relevant markdown files in the same change — most commonly `backend/CHANGELOG.md` and/or `frontend/CHANGELOG.md` (whichever side changed) and `README.md`. There is no root `CHANGELOG.md` — do not recreate one; log backend changes in `backend/CHANGELOG.md` and frontend changes in `frontend/CHANGELOG.md`.
 
 ## Commit attribution
 

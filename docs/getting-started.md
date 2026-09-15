@@ -112,7 +112,8 @@ Use `frontend/.env` for `VITE_*` values and `backend/.env` for `PORT`, `JWT_SECR
 ## Getting Help
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md)
-- [CHANGELOG.md](../CHANGELOG.md)
+- [backend/CHANGELOG.md](../backend/CHANGELOG.md)
+- [frontend/CHANGELOG.md](../frontend/CHANGELOG.md)
 - [SUPPORT.md](../SUPPORT.md)
 - [ROADMAP.md](../ROADMAP.md)
 

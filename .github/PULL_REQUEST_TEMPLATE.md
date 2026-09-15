@@ -23,7 +23,7 @@ Closes #
 
 - [ ] `npm run build` passes without errors
 - [ ] No new runtime libraries added to `dependencies`
-- [ ] Relevant markdown files updated (`README.md`, `CHANGELOG.md`)
+- [ ] Relevant markdown files updated (`README.md`, `backend/CHANGELOG.md` and/or `frontend/CHANGELOG.md`)
 - [ ] Branch targets `develop` (not `main`)
 - [ ] Commit messages follow `<type>: <summary>` format
 - [ ] No AI/bot co-author attribution in commits

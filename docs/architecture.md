@@ -97,8 +97,9 @@ vita-forge/
 │   │   └── routes/        # Route definitions
 ├── .github/           # GitHub workflows, issues, PRs
 ├── README.md          # Main project documentation
-├── CHANGELOG.md       # Version history
-└── CONTRIBUTING.md    # Contribution guidelines
+├── CONTRIBUTING.md    # Contribution guidelines
+├── backend/CHANGELOG.md   # Backend version history
+└── frontend/CHANGELOG.md  # Frontend version history
 ```
 
 ### 3. API Design Principles

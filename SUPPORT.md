@@ -28,7 +28,7 @@ For other private matters, contact the maintainer at **srikanthfernando3@gmail.c
 Please check:
 
 1. The [README.md](README.md) for setup and usage instructions.
-2. The [CHANGELOG.md](CHANGELOG.md) to see if your issue was already fixed in a newer version.
+2. The [backend/CHANGELOG.md](backend/CHANGELOG.md) or [frontend/CHANGELOG.md](frontend/CHANGELOG.md) to see if your issue was already fixed in a newer version.
 3. The browser console for error messages (F12 → Console tab).
 
 ---
