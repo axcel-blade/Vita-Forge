@@ -18,6 +18,14 @@ export interface ResumeVersionRecord {
   createdAt: Date;
 }
 
+export interface CoverLetterVersionRecord {
+  id: string;
+  userId: string;
+  payload: Record<string, unknown>;
+  label: string | null;
+  createdAt: Date;
+}
+
 /** Persistence port used by auth and profile services. */
 export interface DataStore {
   findUserByEmail(email: string): Promise<StoredUserRecord | null>;
@@ -29,6 +37,13 @@ export interface DataStore {
   listVersions(userId: string): Promise<ResumeVersionRecord[]>;
   createVersion(userId: string, payload: StoredProfileRecord, label?: string): Promise<ResumeVersionRecord>;
   getVersion(userId: string, versionId: string): Promise<ResumeVersionRecord | null>;
+  listCoverLetterVersions(userId: string): Promise<CoverLetterVersionRecord[]>;
+  createCoverLetterVersion(
+    userId: string,
+    payload: Record<string, unknown>,
+    label?: string,
+  ): Promise<CoverLetterVersionRecord>;
+  getCoverLetterVersion(userId: string, versionId: string): Promise<CoverLetterVersionRecord | null>;
 }
 
 export const DATA_STORE = 'DATA_STORE';

@@ -9,7 +9,13 @@ export {
   getProfile as getUserProfile,
   deleteProfile,
   isAuthenticated,
+  listProfileVersions,
+  createProfileVersion,
+  restoreProfileVersion,
+  listCoverLetterVersions,
+  createCoverLetterVersion,
 } from './user';
+export type { ResumeVersion, CoverLetterVersion } from './user';
 export { API_BASE_URL, API_TIMEOUT, API_CONFIG } from './config';
 export { apiRequest } from './http';
 export { generateResumeSummary, generateCoverLetter, aiApiClient } from './ai';

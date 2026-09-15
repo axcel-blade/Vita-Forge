@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import {
+  CoverLetterVersionRecord,
   DataStore,
   ResumeVersionRecord,
   StoredProfileRecord,
@@ -21,6 +22,13 @@ function asProfile(payload: Prisma.JsonValue): StoredProfileRecord {
     return {};
   }
   return payload as StoredProfileRecord;
+}
+
+function asJsonObject(payload: Prisma.JsonValue): Record<string, unknown> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {};
+  }
+  return payload as Record<string, unknown>;
 }
 
 export class PrismaDataStore implements DataStore {
@@ -119,6 +127,55 @@ export class PrismaDataStore implements DataStore {
       id: row.id,
       userId: row.userId,
       payload: asProfile(row.payload),
+      label: row.label,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async listCoverLetterVersions(userId: string): Promise<CoverLetterVersionRecord[]> {
+    const rows = await this.db.coverLetterVersion.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      payload: asJsonObject(row.payload),
+      label: row.label,
+      createdAt: row.createdAt,
+    }));
+  }
+
+  async createCoverLetterVersion(
+    userId: string,
+    payload: Record<string, unknown>,
+    label?: string,
+  ): Promise<CoverLetterVersionRecord> {
+    const row = await this.db.coverLetterVersion.create({
+      data: {
+        userId,
+        payload: payload as Prisma.InputJsonValue,
+        label: label ?? null,
+      },
+    });
+    return {
+      id: row.id,
+      userId: row.userId,
+      payload: asJsonObject(row.payload),
+      label: row.label,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async getCoverLetterVersion(userId: string, versionId: string): Promise<CoverLetterVersionRecord | null> {
+    const row = await this.db.coverLetterVersion.findFirst({ where: { id: versionId, userId } });
+    if (!row) {
+      return null;
+    }
+    return {
+      id: row.id,
+      userId: row.userId,
+      payload: asJsonObject(row.payload),
       label: row.label,
       createdAt: row.createdAt,
     };

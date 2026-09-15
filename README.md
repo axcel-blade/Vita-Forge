@@ -155,16 +155,57 @@ docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up --
 
 Default DB URL: `postgresql://vita:vita@postgres:5432/vitaforge` (override with `DATABASE_URL` / `POSTGRES_*`).
 
+**Seed demo data**
+
+Run the Prisma seed script inside the backend container (requires the `db` profile to be up, since the base stack alone leaves `DATABASE_URL` unset):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec backend npm run prisma:seed
+```
+
+Creates the demo user `demo@vitaforge.dev` / `Password123!` with a sample resume profile.
+
+**Inspect the database**
+
+```bash
+# Open a psql shell inside the postgres container
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec postgres psql -U vita -d vitaforge
+
+# Run a one-off query without an interactive shell
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec postgres psql -U vita -d vitaforge -c "SELECT email FROM users;"
+
+# Prisma Studio (browser UI) against the compose database
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec backend npx prisma studio --schema database/schema.prisma
+```
+
+**Migrations**
+
+```bash
+# Applied automatically on backend startup when DATABASE_URL is set; to run by hand:
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec backend npx prisma migrate deploy --schema database/schema.prisma
+
+# Check pending/applied migration status
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db exec backend npx prisma migrate status --schema database/schema.prisma
+```
+
 **Useful flags**
 
 ```bash
 # Rebuild images after code changes
 docker compose up --build
 
+# Rebuild just the backend (e.g. after a backend-only change)
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up -d --build backend
+
 # View logs
 docker compose logs -f backend
 docker compose logs -f frontend
+
+# Recreate a stale container so it picks up new compose env vars
+docker compose -f docker-compose.yml -f docker-compose.db.yml --profile db up -d --force-recreate backend
 ```
+
+> Note: `docker compose exec` runs inside the container as it was last started — it does not reapply compose config. If you change compose files or env vars, use `up -d` (optionally `--force-recreate`) before `exec`, not `exec` alone.
 
 Image definitions live under `docker/`. Compose files are `docker-compose.yml` and optional `docker-compose.db.yml` at the repo root.
 

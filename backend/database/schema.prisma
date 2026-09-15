@@ -17,6 +17,7 @@ model User {
   updatedAt    DateTime        @updatedAt
   profile      ResumeProfile?
   versions     ResumeVersion[]
+  coverLetters CoverLetterVersion[]
 
   @@map("users")
 }
@@ -42,4 +43,16 @@ model ResumeVersion {
 
   @@index([userId, createdAt])
   @@map("resume_versions")
+}
+
+model CoverLetterVersion {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload   Json
+  label     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("cover_letter_versions")
 }

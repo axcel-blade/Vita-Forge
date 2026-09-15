@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../src/auth/auth.service';
 import { UsersService } from '../../src/users/users.service';
 
@@ -49,5 +49,27 @@ describe('UsersService', () => {
     });
     const restored = await usersService.restoreVersion(authorization, version.id);
     expect(restored.profile?.resume).toEqual({ profile: { fullName: 'Ada Lovelace' } });
+  });
+
+  it('rejects a cover letter snapshot when none has been saved', async () => {
+    await expect(usersService.createCoverLetterVersion(authorization)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('creates and lists cover letter versions', async () => {
+    await usersService.upsertProfile(authorization, {
+      coverLetter: { fullName: 'Ada Lovelace', body: 'Draft one' },
+    });
+    await usersService.createCoverLetterVersion(authorization, 'first draft');
+
+    await usersService.upsertProfile(authorization, {
+      coverLetter: { fullName: 'Ada Lovelace', body: 'Draft two' },
+    });
+    await usersService.createCoverLetterVersion(authorization, 'second draft');
+
+    const versions = await usersService.listCoverLetterVersions(authorization);
+    expect(versions).toHaveLength(2);
+    expect(versions.map((v) => v.label).sort()).toEqual(['first draft', 'second draft']);
   });
 });

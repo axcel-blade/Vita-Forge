@@ -11,3 +11,9 @@ export class CreateVersionDto {
   @IsString()
   label?: string;
 }
+
+export class CreateCoverLetterVersionDto {
+  @IsOptional()
+  @IsString()
+  label?: string;
+}

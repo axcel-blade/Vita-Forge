@@ -16,6 +16,8 @@ export interface ResumeVersionResponse {
   createdAt: string;
 }
 
+export type CoverLetterVersionResponse = ResumeVersionResponse;
+
 @Injectable()
 export class UsersService {
   private readonly store: DataStore;
@@ -78,5 +80,32 @@ export class UsersService {
     }
     const profile = await this.store.upsertProfile(user.id, version.payload);
     return { user, profile };
+  }
+
+  async listCoverLetterVersions(authorization?: string): Promise<CoverLetterVersionResponse[]> {
+    const user = await this.authService.getMe(authorization);
+    const versions = await this.store.listCoverLetterVersions(user.id);
+    return versions.map((version) => ({
+      id: version.id,
+      label: version.label,
+      createdAt: version.createdAt.toISOString(),
+    }));
+  }
+
+  async createCoverLetterVersion(
+    authorization: string | undefined,
+    label?: string,
+  ): Promise<CoverLetterVersionResponse> {
+    const user = await this.authService.getMe(authorization);
+    const profile = await this.store.getProfile(user.id);
+    if (!profile?.coverLetter) {
+      throw new NotFoundException('No cover letter to snapshot');
+    }
+    const version = await this.store.createCoverLetterVersion(user.id, profile.coverLetter, label);
+    return {
+      id: version.id,
+      label: version.label,
+      createdAt: version.createdAt.toISOString(),
+    };
   }
 }

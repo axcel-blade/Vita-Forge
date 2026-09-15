@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { CreateVersionDto, RestoreVersionDto } from './dto/restore-version.dto';
+import { CreateCoverLetterVersionDto, CreateVersionDto, RestoreVersionDto } from './dto/restore-version.dto';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
 import { UsersService } from './users.service';
 
@@ -50,5 +50,20 @@ export class UsersController {
     @Body() body: RestoreVersionDto,
   ) {
     return this.usersService.restoreVersion(authorization, body.versionId);
+  }
+
+  @Get('cover-letters')
+  @HttpCode(HttpStatus.OK)
+  listCoverLetters(@Headers('authorization') authorization?: string) {
+    return this.usersService.listCoverLetterVersions(authorization);
+  }
+
+  @Post('cover-letters')
+  @HttpCode(HttpStatus.CREATED)
+  createCoverLetter(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: CreateCoverLetterVersionDto,
+  ) {
+    return this.usersService.createCoverLetterVersion(authorization, body?.label);
   }
 }

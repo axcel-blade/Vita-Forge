@@ -59,7 +59,7 @@ export function RegisterPage() {
       });
       
       // Redirect to dashboard after successful registration
-      navigate('/apps/resume-builder', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed';
       setError(message);

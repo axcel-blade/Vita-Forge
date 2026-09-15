@@ -73,3 +73,24 @@ export function restoreProfileVersion(versionId: string): Promise<UserProfileRes
     auth: true,
   });
 }
+
+export interface CoverLetterVersion {
+  id: string;
+  label: string | null;
+  createdAt: string;
+}
+
+export function listCoverLetterVersions(): Promise<CoverLetterVersion[]> {
+  return apiRequest<CoverLetterVersion[]>('/users/cover-letters', {
+    method: 'GET',
+    auth: true,
+  });
+}
+
+export function createCoverLetterVersion(label?: string): Promise<CoverLetterVersion> {
+  return apiRequest<CoverLetterVersion>('/users/cover-letters', {
+    method: 'POST',
+    body: { label },
+    auth: true,
+  });
+}

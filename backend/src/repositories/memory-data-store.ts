@@ -1,4 +1,5 @@
 import {
+  CoverLetterVersionRecord,
   DataStore,
   ResumeVersionRecord,
   StoredProfileRecord,
@@ -10,6 +11,7 @@ export class MemoryDataStore implements DataStore {
   private readonly usersById = new Map<string, StoredUserRecord>();
   private readonly profiles = new Map<string, StoredProfileRecord>();
   private readonly versions = new Map<string, ResumeVersionRecord[]>();
+  private readonly coverLetterVersions = new Map<string, CoverLetterVersionRecord[]>();
 
   async findUserByEmail(email: string): Promise<StoredUserRecord | null> {
     return this.usersByEmail.get(email) ?? null;
@@ -65,5 +67,33 @@ export class MemoryDataStore implements DataStore {
 
   async getVersion(userId: string, versionId: string): Promise<ResumeVersionRecord | null> {
     return (this.versions.get(userId) ?? []).find((entry) => entry.id === versionId) ?? null;
+  }
+
+  async listCoverLetterVersions(userId: string): Promise<CoverLetterVersionRecord[]> {
+    return [...(this.coverLetterVersions.get(userId) ?? [])].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+  }
+
+  async createCoverLetterVersion(
+    userId: string,
+    payload: Record<string, unknown>,
+    label?: string,
+  ): Promise<CoverLetterVersionRecord> {
+    const record: CoverLetterVersionRecord = {
+      id: crypto.randomUUID(),
+      userId,
+      payload: { ...payload },
+      label: label ?? null,
+      createdAt: new Date(),
+    };
+    const existing = this.coverLetterVersions.get(userId) ?? [];
+    existing.push(record);
+    this.coverLetterVersions.set(userId, existing);
+    return record;
+  }
+
+  async getCoverLetterVersion(userId: string, versionId: string): Promise<CoverLetterVersionRecord | null> {
+    return (this.coverLetterVersions.get(userId) ?? []).find((entry) => entry.id === versionId) ?? null;
   }
 }

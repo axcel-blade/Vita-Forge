@@ -16,7 +16,7 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/apps/resume-builder';
+  const redirectTo = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/dashboard';
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();

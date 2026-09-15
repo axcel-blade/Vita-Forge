@@ -14,6 +14,7 @@ import {
 import { defaultCoverLetterData, defaultData } from "../../../constants/defaultData";
 import { useAuth } from "../../../services/auth-context";
 import { pullRemoteProfile, pushRemoteProfile } from "../../../services/profile-sync";
+import { createCoverLetterVersion } from "../../../services/user";
 
 const initialForm = defaultCoverLetterData;
 
@@ -52,6 +53,7 @@ const deriveFromResume = (resume) => {
 export default function CoverLetterHome() {
   const [formData, setFormData] = useState(initialForm);
   const [isSavingPdf, setIsSavingPdf] = useState(false);
+  const [isSavingVersion, setIsSavingVersion] = useState(false);
   const [hasResumeIdentity, setHasResumeIdentity] = useState(false);
   const [syncError, setSyncError] = useState("");
   const fileInputRef = useRef(null);
@@ -129,6 +131,23 @@ export default function CoverLetterHome() {
     }, 800);
     return () => window.clearTimeout(timer);
   }, [formData, isAuthenticated]);
+
+  const handleSaveVersion = async () => {
+    setIsSavingVersion(true);
+    try {
+      const result = await pushRemoteProfile(readProfileBundle().resume, formData);
+      if (result.error) {
+        setSyncError(result.error);
+        return;
+      }
+      await createCoverLetterVersion(`Cover letter ${new Date().toLocaleString()}`);
+      setSyncError("");
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "Could not save cover letter");
+    } finally {
+      setIsSavingVersion(false);
+    }
+  };
 
   const handleSavePdf = () => {
     try {
@@ -240,6 +259,16 @@ export default function CoverLetterHome() {
         >
           Import JSON
         </button>
+        {isAuthenticated ? (
+          <button
+            type="button"
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={handleSaveVersion}
+            disabled={isSavingVersion}
+          >
+            {isSavingVersion ? "Saving..." : "Save to dashboard"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70"
