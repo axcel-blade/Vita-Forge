@@ -29,40 +29,6 @@
   margin: 0;
 }
 
-.dashboard-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.dashboard-account-link {
-  color: #0284c7;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-decoration: none;
-}
-
-.dashboard-account-link:hover {
-  text-decoration: underline;
-}
-
-.dashboard-logout {
-  height: 40px;
-  padding: 0 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: white;
-  color: #374151;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.dashboard-logout:hover {
-  background: #f9fafb;
-}
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
