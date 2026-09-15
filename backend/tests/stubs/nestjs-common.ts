@@ -35,6 +35,16 @@ export class ConflictException extends Error {
   }
 }
 
+export class ForbiddenException extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = 'ForbiddenException';
+  }
+}
+
+export type CanActivate = { canActivate: (...args: unknown[]) => unknown };
+export type ExecutionContext = { switchToHttp: () => { getRequest: <T>() => T } };
+
 export class NotFoundException extends Error {
   constructor(message?: string) {
     super(message);

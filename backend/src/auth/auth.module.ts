@@ -1,24 +1,14 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from '../repositories/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
+import { CsrfGuard } from './csrf.guard';
+import { SessionAuthGuard } from './session-auth.guard';
 
 @Module({
-  imports: [
-    PrismaModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      useFactory: async () => ({
-        secret: process.env.JWT_SECRET || 'vita-forge-secret-key-change-in-production',
-        signOptions: { expiresIn: '7d' },
-      }),
-    }),
-  ],
+  imports: [PrismaModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, SessionAuthGuard, CsrfGuard],
+  exports: [AuthService, SessionAuthGuard, CsrfGuard],
 })
 export class AuthModule {}

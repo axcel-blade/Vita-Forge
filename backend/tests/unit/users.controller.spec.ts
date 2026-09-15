@@ -1,6 +1,10 @@
 import { UsersController } from '../../src/users/users.controller';
 import { UsersService } from '../../src/users/users.service';
 
+function fakeRequest(sessionId = 'sess-1') {
+  return { sessionId } as never;
+}
+
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: {
@@ -24,28 +28,28 @@ describe('UsersController', () => {
     controller = new UsersController(usersService as unknown as UsersService);
   });
 
-  it('reads the profile from the Authorization header', async () => {
-    await controller.getProfile('Bearer abc');
-    expect(usersService.getProfile).toHaveBeenCalledWith('Bearer abc');
+  it('reads the profile using the session id the guard attached to the request', async () => {
+    await controller.getProfile(fakeRequest('sess-1'));
+    expect(usersService.getProfile).toHaveBeenCalledWith('sess-1');
   });
 
   it('creates or updates a profile payload', async () => {
     const body = { resume: { profile: { fullName: 'Ada' } } };
-    await controller.updateProfile('Bearer abc', body);
-    expect(usersService.upsertProfile).toHaveBeenCalledWith('Bearer abc', body);
+    await controller.updateProfile(fakeRequest('sess-1'), body);
+    expect(usersService.upsertProfile).toHaveBeenCalledWith('sess-1', body);
   });
 
   it('deletes the stored profile', async () => {
-    await controller.deleteProfile('Bearer abc');
-    expect(usersService.deleteProfile).toHaveBeenCalledWith('Bearer abc');
+    await controller.deleteProfile(fakeRequest('sess-1'));
+    expect(usersService.deleteProfile).toHaveBeenCalledWith('sess-1');
   });
 
   it('lists and restores profile versions', async () => {
-    await controller.listVersions('Bearer abc');
-    expect(usersService.listVersions).toHaveBeenCalledWith('Bearer abc');
-    await controller.createVersion('Bearer abc', { label: 'before rewrite' });
-    expect(usersService.createVersion).toHaveBeenCalledWith('Bearer abc', 'before rewrite');
-    await controller.restoreVersion('Bearer abc', { versionId: 'v1' });
-    expect(usersService.restoreVersion).toHaveBeenCalledWith('Bearer abc', 'v1');
+    await controller.listVersions(fakeRequest('sess-1'));
+    expect(usersService.listVersions).toHaveBeenCalledWith('sess-1');
+    await controller.createVersion(fakeRequest('sess-1'), { label: 'before rewrite' });
+    expect(usersService.createVersion).toHaveBeenCalledWith('sess-1', 'before rewrite');
+    await controller.restoreVersion(fakeRequest('sess-1'), { versionId: 'v1' });
+    expect(usersService.restoreVersion).toHaveBeenCalledWith('sess-1', 'v1');
   });
 });

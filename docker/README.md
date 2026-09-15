@@ -37,7 +37,6 @@ This sets `DATABASE_URL` for the API, waits for Postgres health, and runs `prism
 Compose reads env vars from your shell or a root `.env` (not committed):
 
 ```bash
-JWT_SECRET=change-me
 CORS_ORIGINS=http://localhost:8080
 VITE_API_BASE_URL=http://localhost:3001/api/v1
 ANTHROPIC_API_KEY=

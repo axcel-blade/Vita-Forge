@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, Patch, Post, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { CookieOptions, Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { AuthenticatedRequest, SessionAuthGuard } from './session-auth.guard';
+import { CsrfGuard } from './csrf.guard';
+import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, SESSION_TTL_MS } from './session.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 
@@ -13,68 +15,91 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  register(@Body() registerDto: RegisterDto, @Req() req: Request) {
-    return this.authService.register(registerDto, this.sessionMeta(req));
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.register(registerDto, this.sessionMeta(req));
+    this.applySessionCookies(res, result.sessionId, result.csrfToken);
+    return { message: result.message, userId: result.userId };
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() loginDto: LoginDto, @Req() req: Request) {
-    return this.authService.login(loginDto, this.sessionMeta(req));
-  }
-
-  @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  refresh(@Body() body: RefreshDto) {
-    return this.authService.refresh(body.refresh_token);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(loginDto, this.sessionMeta(req));
+    this.applySessionCookies(res, result.sessionId, result.csrfToken);
+    return { message: result.message, userId: result.userId };
   }
 
   @Get('me')
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.OK)
-  me(@Headers('authorization') authorization?: string) {
-    return this.authService.getMe(authorization);
+  me(@Req() req: AuthenticatedRequest) {
+    return this.authService.getMe(req.sessionId);
   }
 
   @Post('logout')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  logout(@Headers('authorization') authorization?: string) {
-    return this.authService.logout(authorization);
+  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.sessionId);
+    this.clearSessionCookies(res);
   }
 
   @Get('sessions')
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.OK)
-  listSessions(@Headers('authorization') authorization?: string) {
-    return this.authService.listSessions(authorization);
+  listSessions(@Req() req: AuthenticatedRequest) {
+    return this.authService.listSessions(req.sessionId);
   }
 
   @Delete('sessions/:id')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  revokeSession(
-    @Headers('authorization') authorization: string | undefined,
-    @Param('id') id: string,
-  ) {
-    return this.authService.revokeSession(authorization, id);
+  revokeSession(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.authService.revokeSession(req.sessionId, id);
   }
 
   @Patch('account')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   @HttpCode(HttpStatus.OK)
-  updateAccount(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: UpdateAccountDto,
-  ) {
-    return this.authService.updateAccount(authorization, body);
+  updateAccount(@Req() req: AuthenticatedRequest, @Body() body: UpdateAccountDto) {
+    return this.authService.updateAccount(req.sessionId, body);
   }
 
   @Post('change-password')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  changePassword(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: ChangePasswordDto,
-  ) {
-    return this.authService.changePassword(authorization, body);
+  changePassword(@Req() req: AuthenticatedRequest, @Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(req.sessionId, body);
   }
 
   private sessionMeta(req: Request) {
     return { userAgent: req.headers['user-agent'] ?? null, ip: req.ip ?? null };
+  }
+
+  private applySessionCookies(res: Response, sessionId: string, csrfToken: string) {
+    const isProd = process.env.NODE_ENV === 'production';
+    const base: CookieOptions = {
+      path: '/',
+      maxAge: SESSION_TTL_MS,
+      secure: isProd,
+      sameSite: 'lax',
+    };
+    // Session id: HttpOnly so page JS (and XSS) can never read it.
+    res.cookie(SESSION_COOKIE_NAME, sessionId, { ...base, httpOnly: true });
+    // CSRF token: deliberately readable so the frontend can echo it back as a header.
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, { ...base, httpOnly: false });
+  }
+
+  private clearSessionCookies(res: Response) {
+    res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+    res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
   }
 }

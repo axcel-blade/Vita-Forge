@@ -30,9 +30,12 @@ model Session {
   ip         String?
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime  @default(now())
+  // Sliding 30-day inactivity expiry; pushed forward on every authenticated request.
+  expiresAt  DateTime  @default(now())
   revokedAt  DateTime?
 
   @@index([userId, revokedAt])
+  @@index([expiresAt])
   @@map("sessions")
 }
 

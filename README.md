@@ -36,7 +36,7 @@ The repo is split into a Vite frontend and a NestJS backend. The UI never talks 
 - Export to PDF or JSON; import a saved profile from JSON
 
 **Backend Integration**
-- User accounts with authentication (JWT tokens)
+- User accounts with authentication (secure HttpOnly session cookies, 30-day sliding expiry)
 - Persistent storage for profiles, resumes, and cover letters via PostgreSQL
 - User-specific data isolation between accounts
 - Profile sync across devices and browser sessions

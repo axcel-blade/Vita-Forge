@@ -27,27 +27,27 @@ export class UsersService {
     this.store = store ?? new MemoryDataStore();
   }
 
-  async getProfile(authorization?: string): Promise<UserProfileResponse> {
-    const user = await this.authService.getMe(authorization);
+  async getProfile(sessionId?: string): Promise<UserProfileResponse> {
+    const user = await this.authService.getMe(sessionId);
     return {
       user,
       profile: await this.store.getProfile(user.id),
     };
   }
 
-  async upsertProfile(authorization: string | undefined, profile: StoredProfile): Promise<UserProfileResponse> {
-    const user = await this.authService.getMe(authorization);
+  async upsertProfile(sessionId: string | undefined, profile: StoredProfile): Promise<UserProfileResponse> {
+    const user = await this.authService.getMe(sessionId);
     const next = await this.store.upsertProfile(user.id, profile);
     return { user, profile: next };
   }
 
-  async deleteProfile(authorization?: string): Promise<void> {
-    const user = await this.authService.getMe(authorization);
+  async deleteProfile(sessionId?: string): Promise<void> {
+    const user = await this.authService.getMe(sessionId);
     await this.store.deleteProfile(user.id);
   }
 
-  async listVersions(authorization?: string): Promise<ResumeVersionResponse[]> {
-    const user = await this.authService.getMe(authorization);
+  async listVersions(sessionId?: string): Promise<ResumeVersionResponse[]> {
+    const user = await this.authService.getMe(sessionId);
     const versions = await this.store.listVersions(user.id);
     return versions.map((version) => ({
       id: version.id,
@@ -56,8 +56,8 @@ export class UsersService {
     }));
   }
 
-  async createVersion(authorization: string | undefined, label?: string): Promise<ResumeVersionResponse> {
-    const user = await this.authService.getMe(authorization);
+  async createVersion(sessionId: string | undefined, label?: string): Promise<ResumeVersionResponse> {
+    const user = await this.authService.getMe(sessionId);
     const profile = await this.store.getProfile(user.id);
     if (!profile) {
       throw new NotFoundException('No profile to snapshot');
@@ -70,8 +70,8 @@ export class UsersService {
     };
   }
 
-  async restoreVersion(authorization: string | undefined, versionId: string): Promise<UserProfileResponse> {
-    const user = await this.authService.getMe(authorization);
+  async restoreVersion(sessionId: string | undefined, versionId: string): Promise<UserProfileResponse> {
+    const user = await this.authService.getMe(sessionId);
     const version = await this.store.getVersion(user.id, versionId);
     if (!version) {
       throw new NotFoundException('Version not found');

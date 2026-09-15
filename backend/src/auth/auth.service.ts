@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { DATA_STORE, DataStore, SessionMeta, SessionRecord, StoredUserRecord } from '../repositories/data-store';
 import { MemoryDataStore } from '../repositories/memory-data-store';
 
@@ -17,11 +17,12 @@ export interface StoredUser {
   password: string;
 }
 
-export interface AuthTokenResponse {
+export interface AuthResult {
   message: string;
   userId: string;
-  access_token: string;
-  refresh_token: string;
+  sessionId: string;
+  csrfToken: string;
+  expiresAt: string;
 }
 
 export interface CurrentUserResponse {
@@ -39,25 +40,17 @@ export interface SessionResponse {
   ip: string | null;
   createdAt: string;
   lastUsedAt: string;
+  expiresAt: string;
   isCurrent: boolean;
 }
 
-interface TokenPayload {
-  sub: string;
-  email: string;
-  typ: 'access' | 'refresh';
-  sid?: string;
-}
-
-interface ResolvedAuth {
+interface ResolvedSession {
   user: StoredUser;
-  sessionId?: string;
+  sessionId: string;
 }
 
 @Injectable()
 export class AuthService {
-  private readonly jwtSecret =
-    process.env.JWT_SECRET || 'vita-forge-secret-key-change-in-production';
   private readonly store: DataStore;
 
   /**
@@ -71,7 +64,7 @@ export class AuthService {
   async register(
     userData: { email: string; password: string; name?: string },
     meta: SessionMeta = {},
-  ): Promise<AuthTokenResponse> {
+  ): Promise<AuthResult> {
     const { email, password, name = '' } = userData;
     const existing = await this.store.findUserByEmail(email);
     if (existing) {
@@ -86,69 +79,59 @@ export class AuthService {
     });
 
     const session = await this.store.createSession(user.id, meta);
-    return this.issueTokens(this.toStoredUser(user), session.id, 'Registration successful');
+    return this.buildAuthResult(session, 'Registration successful');
   }
 
   async login(
     loginData: { email: string; password: string },
     meta: SessionMeta = {},
-  ): Promise<AuthTokenResponse> {
+  ): Promise<AuthResult> {
     const user = await this.store.findUserByEmail(loginData.email);
 
     if (!user || !(await bcrypt.compare(loginData.password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Always mint a brand-new session on successful login (session-fixation prevention) —
+    // never reuse or upgrade a pre-existing/anonymous session id.
     const session = await this.store.createSession(user.id, meta);
-    return this.issueTokens(this.toStoredUser(user), session.id, 'Login successful');
+    return this.buildAuthResult(session, 'Login successful');
   }
 
-  async refresh(refreshToken?: string): Promise<AuthTokenResponse> {
-    const { user, sessionId } = await this.resolveUser(refreshToken, 'refresh');
-    if (sessionId) {
-      await this.store.touchSession(sessionId);
+  async getMe(sessionId?: string): Promise<CurrentUserResponse> {
+    const { user } = await this.resolveSession(sessionId);
+    return this.toCurrentUser(user);
+  }
+
+  async logout(sessionId?: string): Promise<void> {
+    if (!sessionId) {
+      return;
     }
-    return this.issueTokens(user, sessionId, 'Token refreshed');
-  }
-
-  async getMe(authorization?: string): Promise<CurrentUserResponse> {
-    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name || 'Demo User',
-      avatar: null,
-      bio: '',
-      skills: [],
-    };
-  }
-
-  async logout(authorization?: string): Promise<void> {
-    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
-    if (sessionId) {
-      await this.store.revokeSession(user.id, sessionId);
+    const session = await this.store.getSession(sessionId);
+    if (session && !session.revokedAt) {
+      await this.store.revokeSession(session.userId, sessionId);
     }
   }
 
-  async listSessions(authorization?: string): Promise<SessionResponse[]> {
-    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+  async listSessions(sessionId?: string): Promise<SessionResponse[]> {
+    const { user, sessionId: currentSessionId } = await this.resolveSession(sessionId);
     const sessions = await this.store.listActiveSessions(user.id);
-    return sessions.map((session) => this.toSessionResponse(session, sessionId));
+    return sessions.map((session) => this.toSessionResponse(session, currentSessionId));
   }
 
-  async revokeSession(authorization: string | undefined, sessionId: string): Promise<void> {
-    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
-    const revoked = await this.store.revokeSession(user.id, sessionId);
+  async revokeSession(sessionId: string | undefined, targetSessionId: string): Promise<void> {
+    const { user } = await this.resolveSession(sessionId);
+    const revoked = await this.store.revokeSession(user.id, targetSessionId);
     if (!revoked) {
       throw new UnauthorizedException('Session not found');
     }
   }
 
   async updateAccount(
-    authorization: string | undefined,
+    sessionId: string | undefined,
     patch: { name?: string; email?: string },
   ): Promise<CurrentUserResponse> {
-    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    const { user } = await this.resolveSession(sessionId);
 
     if (patch.email && patch.email !== user.email) {
       const existing = await this.store.findUserByEmail(patch.email);
@@ -166,21 +149,14 @@ export class AuthService {
     }
 
     const updated = await this.store.updateUser(user.id, updatePayload);
-    return {
-      id: updated.id,
-      email: updated.email,
-      name: updated.name || 'Demo User',
-      avatar: null,
-      bio: '',
-      skills: [],
-    };
+    return this.toCurrentUser(this.toStoredUser(updated));
   }
 
   async changePassword(
-    authorization: string | undefined,
+    sessionId: string | undefined,
     body: { currentPassword: string; newPassword: string },
   ): Promise<void> {
-    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    const { user, sessionId: currentSessionId } = await this.resolveSession(sessionId);
 
     // `user.password` holds the stored hash (see toStoredUser).
     const valid = await bcrypt.compare(body.currentPassword, user.password);
@@ -194,65 +170,44 @@ export class AuthService {
     // Changing the password is a security-sensitive action — sign out every other device.
     const sessions = await this.store.listActiveSessions(user.id);
     await Promise.all(
-      sessions.filter((session) => session.id !== sessionId).map((session) => this.store.revokeSession(user.id, session.id)),
+      sessions
+        .filter((session) => session.id !== currentSessionId)
+        .map((session) => this.store.revokeSession(user.id, session.id)),
     );
   }
 
-  private issueTokens(user: StoredUser, sessionId: string | undefined, message: string): AuthTokenResponse {
+  /**
+   * Validates a session cookie value against the backend store, rejecting missing, unknown,
+   * revoked, or expired sessions, and slides the 30-day inactivity window forward on success.
+   */
+  async resolveSession(sessionId?: string): Promise<ResolvedSession> {
+    if (!sessionId) {
+      throw new UnauthorizedException('Missing session');
+    }
+
+    const session = await this.store.getSession(sessionId);
+    if (!session || session.revokedAt || session.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Session expired or invalid');
+    }
+
+    const record = await this.store.findUserById(session.userId);
+    if (!record) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    await this.store.touchSession(sessionId);
+    return { user: this.toStoredUser(record), sessionId };
+  }
+
+  private buildAuthResult(session: SessionRecord, message: string): AuthResult {
     return {
       message,
-      userId: user.id,
-      access_token: this.signToken(user, 'access', sessionId),
-      refresh_token: this.signToken(user, 'refresh', sessionId),
+      userId: session.userId,
+      sessionId: session.id,
+      // Double-submit CSRF token: unrelated to the session id, only ever compared to itself.
+      csrfToken: crypto.randomBytes(32).toString('hex'),
+      expiresAt: session.expiresAt.toISOString(),
     };
-  }
-
-  private async resolveUser(token: string | undefined, expectedType: TokenPayload['typ']): Promise<ResolvedAuth> {
-    if (!token) {
-      throw new UnauthorizedException(expectedType === 'refresh' ? 'Missing refresh token' : 'Missing token');
-    }
-
-    try {
-      const payload = jwt.verify(token, this.jwtSecret) as TokenPayload;
-      if (payload.typ && payload.typ !== expectedType) {
-        throw new UnauthorizedException('Invalid token');
-      }
-
-      const record =
-        (await this.store.findUserByEmail(payload.email)) ?? (await this.store.findUserById(payload.sub));
-
-      if (!record) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      // Tokens issued before session tracking have no `sid` — accept them without a session check.
-      if (payload.sid) {
-        const session = await this.store.getSession(payload.sid);
-        if (!session || session.revokedAt || session.userId !== record.id) {
-          throw new UnauthorizedException('Session revoked');
-        }
-      }
-
-      return { user: this.toStoredUser(record), sessionId: payload.sid };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new UnauthorizedException(expectedType === 'refresh' ? 'Invalid refresh token' : 'Invalid token');
-    }
-  }
-
-  private signToken(user: StoredUser, typ: TokenPayload['typ'], sessionId?: string): string {
-    return jwt.sign({ sub: user.id, email: user.email, typ, sid: sessionId }, this.jwtSecret, {
-      expiresIn: typ === 'access' ? '15m' : '7d',
-    });
-  }
-
-  private extractBearerToken(authorization?: string): string | undefined {
-    if (!authorization) {
-      return undefined;
-    }
-    return authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization;
   }
 
   private toStoredUser(user: StoredUserRecord): StoredUser {
@@ -264,6 +219,17 @@ export class AuthService {
     };
   }
 
+  private toCurrentUser(user: StoredUser): CurrentUserResponse {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || 'Demo User',
+      avatar: null,
+      bio: '',
+      skills: [],
+    };
+  }
+
   private toSessionResponse(session: SessionRecord, currentSessionId?: string): SessionResponse {
     return {
       id: session.id,
@@ -271,6 +237,7 @@ export class AuthService {
       ip: session.ip,
       createdAt: session.createdAt.toISOString(),
       lastUsedAt: session.lastUsedAt.toISOString(),
+      expiresAt: session.expiresAt.toISOString(),
       isCurrent: session.id === currentSessionId,
     };
   }
