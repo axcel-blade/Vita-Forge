@@ -1,11 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
 
-const appNavLinks = [
-  { label: "Dashboard", to: "/dashboard" },
-  { label: "Resume Builder", to: "/apps/resume-builder" },
-  { label: "Cover Letter", to: "/apps/cover-letter" },
-];
+const appNavLinks: { label: string; to: string }[] = [];
 
 export default function AppNavbar() {
   return (
