@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Added missing migration for the `sessions.expiresAt` column/index declared in `schema.prisma` (the `20260916000000_sessions` migration predated the sliding-expiry column, so `prisma.session.create()` failed with "column `expiresAt` does not exist" against a freshly migrated database)
+
 ### Changed
 - **Breaking:** Replaced the JWT bearer-token auth flow with secure, server-managed HttpOnly session cookies. `POST /auth/login` and `POST /auth/register` no longer return `access_token`/`refresh_token` in the response body — they set an HttpOnly `vf_session` cookie (30-day sliding inactivity expiry, `Secure` in production, `SameSite=Lax`, `Path=/`) plus a readable `vf_csrf` cookie for double-submit CSRF protection. `POST /auth/refresh` is removed; the session renews itself on every authenticated request instead
 - `Session` records now carry `expiresAt`, pushed forward by 30 days on every authenticated use (`touchSession`); an expired or revoked session is rejected and cannot be renewed
