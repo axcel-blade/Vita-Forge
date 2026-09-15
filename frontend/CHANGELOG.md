@@ -17,6 +17,9 @@
 ### Changed
 - Moved Resume Builder-only components (editors, preview, templates, toolbar) from `src/components/` into `src/features/resume-builder/components/`; `src/components/` now holds only cross-feature shared pieces (`ErrorBoundary`, `Seo`, `Toast`, `TemplateSharedParts`)
 
+### Removed
+- Resume Builder header: "Resume Builder" title, intro description text, "Saved to your account" status line, Template marketplace link, live collaboration controls (Start live session, Room ID input, Join, peer count), and restore point/version history controls (`src/features/resume-builder/pages/Builder.jsx`)
+
 ### Fixed
 - Converted `src/features/auth/ProfileMenu.jsx` and `AppNavbar.jsx` to TypeScript (`.tsx`), fixing a `tsc -b` failure (`TS7016`) that broke the frontend Docker build
 
