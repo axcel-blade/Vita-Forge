@@ -144,7 +144,7 @@ Always update these files when making changes:
 | File | When to Update |
 |------|----------------|
 | `README.md` | Public-facing changes |
-| `CHANGELOG.md` | Version-specific changes |
+| `backend/CHANGELOG.md` / `frontend/CHANGELOG.md` | Version-specific changes (log in whichever side changed) |
 | API docs | Endpoint changes |
 | Component docs | UI/component changes |
 

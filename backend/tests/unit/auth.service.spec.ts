@@ -208,4 +208,105 @@ describe('AuthService', () => {
       await expect(authService.getMe(`Bearer ${access_token}`)).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
+
+  describe('updateAccount', () => {
+    it('updates the name and email', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      const updated = await authService.updateAccount(`Bearer ${access_token}`, {
+        name: 'New Name',
+        email: 'new@example.com',
+      });
+
+      expect(updated.name).toBe('New Name');
+      expect(updated.email).toBe('new@example.com');
+    });
+
+    it('still resolves the account after an email change using the old token', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await authService.updateAccount(`Bearer ${access_token}`, { email: 'new@example.com' });
+
+      const me = await authService.getMe(`Bearer ${access_token}`);
+      expect(me.email).toBe('new@example.com');
+    });
+
+    it('rejects changing to an email already in use', async () => {
+      await authService.register({
+        email: 'taken@example.com',
+        password: 'password123',
+        name: 'Taken',
+      });
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await expect(
+        authService.updateAccount(`Bearer ${access_token}`, { email: 'taken@example.com' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('updates the password and allows login with the new one', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await authService.changePassword(`Bearer ${access_token}`, {
+        currentPassword: 'password123',
+        newPassword: 'newPassword456',
+      });
+
+      const login = await authService.login({ email: 'test@example.com', password: 'newPassword456' });
+      expect(login.access_token).toEqual(expect.any(String));
+    });
+
+    it('rejects the wrong current password', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await expect(
+        authService.changePassword(`Bearer ${access_token}`, {
+          currentPassword: 'wrongPassword',
+          newPassword: 'newPassword456',
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('revokes every other session but keeps the current one', async () => {
+      const { access_token: session1 } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+      const { access_token: session2 } = await authService.login({
+        email: 'test@example.com',
+        password: 'password123',
+      });
+
+      await authService.changePassword(`Bearer ${session1}`, {
+        currentPassword: 'password123',
+        newPassword: 'newPassword456',
+      });
+
+      await expect(authService.getMe(`Bearer ${session1}`)).resolves.toBeDefined();
+      await expect(authService.getMe(`Bearer ${session2}`)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
 });

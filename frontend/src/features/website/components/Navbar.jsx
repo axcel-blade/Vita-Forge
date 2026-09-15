@@ -28,6 +28,18 @@ export default function Navbar() {
           {!isLoading && isAuthenticated && (
             <li>
               <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
+                }
+              >
+                Dashboard
+              </NavLink>
+            </li>
+          )}
+          {!isLoading && isAuthenticated && (
+            <li>
+              <NavLink
                 to="/account/sessions"
                 className={({ isActive }) =>
                   `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`

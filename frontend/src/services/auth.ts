@@ -82,3 +82,29 @@ export function revokeSession(sessionId: string): Promise<void> {
     auth: true,
   });
 }
+
+export interface UpdateAccountData {
+  name?: string;
+  email?: string;
+}
+
+export function updateAccount(data: UpdateAccountData): Promise<UserType> {
+  return apiRequest<UserType>('/auth/account', {
+    method: 'PATCH',
+    body: data,
+    auth: true,
+  });
+}
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export function changePassword(data: ChangePasswordData): Promise<void> {
+  return apiRequest<void>('/auth/change-password', {
+    method: 'POST',
+    body: data,
+    auth: true,
+  });
+}

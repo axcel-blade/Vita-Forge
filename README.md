@@ -188,7 +188,8 @@ vita-forge/
 ## Contributing and support
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Git Flow, commit format, PR checklist
-- [CHANGELOG.md](CHANGELOG.md) — version history
+- [backend/CHANGELOG.md](backend/CHANGELOG.md) — backend version history
+- [frontend/CHANGELOG.md](frontend/CHANGELOG.md) — frontend version history
 - [ROADMAP.md](ROADMAP.md) — planned features
 - [SECURITY.md](SECURITY.md) — vulnerability reporting
 - [SUPPORT.md](SUPPORT.md) — how to get help

@@ -90,7 +90,7 @@ Requires Node.js 20+ and npm 10+. PostgreSQL is optional.
 Before submitting a PR, confirm the following:
 
 - [ ] `npm run build` passes without errors
-- [ ] Relevant markdown files (`README.md`, `CHANGELOG.md`) are updated
+- [ ] Relevant markdown files (`README.md`, `backend/CHANGELOG.md` and/or `frontend/CHANGELOG.md`) are updated
 - [ ] No new runtime libraries added to `dependencies`
 - [ ] Branch targets `develop`, not `main`
 - [ ] Commit messages follow the format above

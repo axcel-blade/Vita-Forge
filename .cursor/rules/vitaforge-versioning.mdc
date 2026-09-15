@@ -1,5 +1,5 @@
 ---
-globs: README.md,CHANGELOG.md,**/package.json,**/CHANGELOG.md,**/.env.example
+globs: README.md,**/package.json,**/CHANGELOG.md,**/.env.example
 alwaysApply: false
 ---
 

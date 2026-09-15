@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, Patch, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -52,6 +54,24 @@ export class AuthController {
     @Param('id') id: string,
   ) {
     return this.authService.revokeSession(authorization, id);
+  }
+
+  @Patch('account')
+  @HttpCode(HttpStatus.OK)
+  updateAccount(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: UpdateAccountDto,
+  ) {
+    return this.authService.updateAccount(authorization, body);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(authorization, body);
   }
 
   private sessionMeta(req: Request) {
