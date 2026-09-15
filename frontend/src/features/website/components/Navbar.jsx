@@ -4,7 +4,7 @@ import { websiteNavLinks } from "../../../constants/navLinks";
 import { useAuth } from "../../../services/auth-context";
 
 export default function Navbar() {
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <header className="border-b border-gray-200 bg-white">
@@ -25,52 +25,16 @@ export default function Navbar() {
               </NavLink>
             </li>
           ))}
-          {!isLoading && isAuthenticated && (
-            <li>
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) =>
-                  `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
-                }
-              >
-                Dashboard
-              </NavLink>
-            </li>
-          )}
-          {!isLoading && isAuthenticated && (
-            <li>
-              <NavLink
-                to="/account/sessions"
-                className={({ isActive }) =>
-                  `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
-                }
-              >
-                Sessions
-              </NavLink>
-            </li>
-          )}
           {!isLoading && (
             <li>
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                  onClick={() => {
-                    void logout();
-                  }}
-                >
-                  Log out
-                </button>
-              ) : (
-                <NavLink
-                  to="/login"
-                  className={({ isActive }) =>
-                    `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
-                  }
-                >
-                  Log in
-                </NavLink>
-              )}
+              <NavLink
+                to={isAuthenticated ? "/dashboard" : "/login"}
+                className={({ isActive }) =>
+                  `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
+                }
+              >
+                {isAuthenticated ? "Go to app" : "Log in"}
+              </NavLink>
             </li>
           )}
         </ul>
