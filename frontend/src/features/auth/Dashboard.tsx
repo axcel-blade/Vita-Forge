@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../services/auth-context';
 import { getProfile, type SyncedProfile } from '../../services/user';
 import './dashboard.css';
@@ -37,8 +37,7 @@ function getCoverLetterTitle(coverLetter: Record<string, unknown> | undefined): 
 }
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const greetingName = user?.name?.trim() || 'there';
   const [profile, setProfile] = useState<SyncedProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -60,11 +59,6 @@ export function DashboardPage() {
     };
   }, []);
 
-  async function handleLogout() {
-    await logout();
-    navigate('/', { replace: true });
-  }
-
   const hasResume = Boolean(profile?.resume);
   const hasCoverLetter = Boolean(profile?.coverLetter);
 
@@ -74,14 +68,6 @@ export function DashboardPage() {
         <div>
           <h1>Welcome back, {greetingName}</h1>
           <p>Choose a tool to continue your application workflow.</p>
-        </div>
-        <div className="dashboard-header-actions">
-          <Link to="/account/settings" className="dashboard-account-link">
-            Account settings
-          </Link>
-          <button type="button" className="dashboard-logout" onClick={() => void handleLogout()}>
-            Log out
-          </button>
         </div>
       </header>
 
