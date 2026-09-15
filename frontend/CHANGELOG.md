@@ -24,6 +24,12 @@
 ### Fixed
 - Converted `src/features/auth/ProfileMenu.jsx` and `AppNavbar.jsx` to TypeScript (`.tsx`), fixing a `tsc -b` failure (`TS7016`) that broke the frontend Docker build
 
+### Removed
+- Dashboard: dropped the "Template marketplace" and "Active sessions" tool cards (`src/features/auth/Dashboard.tsx`); those pages are still reachable from account settings/resume builder navigation
+
+### Added
+- Dashboard "Your documents" section that loads the signed-in user's saved profile (`GET /users/profile`) and shows a card for their resume and cover letter, each linking back into the matching editor
+
 ## [0.8.0] - 2026-09-05
 
 - nginx Docker image for the production Vite build (`docker/frontend.Dockerfile`)
