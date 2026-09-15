@@ -18,6 +18,21 @@ export interface ResumeVersionRecord {
   createdAt: Date;
 }
 
+export interface SessionRecord {
+  id: string;
+  userId: string;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: Date;
+  lastUsedAt: Date;
+  revokedAt: Date | null;
+}
+
+export interface SessionMeta {
+  userAgent?: string | null;
+  ip?: string | null;
+}
+
 /** Persistence port used by auth and profile services. */
 export interface DataStore {
   findUserByEmail(email: string): Promise<StoredUserRecord | null>;
@@ -29,6 +44,11 @@ export interface DataStore {
   listVersions(userId: string): Promise<ResumeVersionRecord[]>;
   createVersion(userId: string, payload: StoredProfileRecord, label?: string): Promise<ResumeVersionRecord>;
   getVersion(userId: string, versionId: string): Promise<ResumeVersionRecord | null>;
+  createSession(userId: string, meta: SessionMeta): Promise<SessionRecord>;
+  getSession(sessionId: string): Promise<SessionRecord | null>;
+  touchSession(sessionId: string): Promise<void>;
+  listActiveSessions(userId: string): Promise<SessionRecord[]>;
+  revokeSession(userId: string, sessionId: string): Promise<boolean>;
 }
 
 export const DATA_STORE = 'DATA_STORE';

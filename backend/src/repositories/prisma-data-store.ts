@@ -2,6 +2,8 @@ import type { Prisma } from '@prisma/client';
 import {
   DataStore,
   ResumeVersionRecord,
+  SessionMeta,
+  SessionRecord,
   StoredProfileRecord,
   StoredUserRecord,
 } from './data-store';
@@ -122,5 +124,42 @@ export class PrismaDataStore implements DataStore {
       label: row.label,
       createdAt: row.createdAt,
     };
+  }
+
+  async createSession(userId: string, meta: SessionMeta): Promise<SessionRecord> {
+    const row = await this.db.session.create({
+      data: {
+        userId,
+        userAgent: meta.userAgent ?? null,
+        ip: meta.ip ?? null,
+      },
+    });
+    return row;
+  }
+
+  async getSession(sessionId: string): Promise<SessionRecord | null> {
+    return this.db.session.findUnique({ where: { id: sessionId } });
+  }
+
+  async touchSession(sessionId: string): Promise<void> {
+    await this.db.session.update({
+      where: { id: sessionId },
+      data: { lastUsedAt: new Date() },
+    });
+  }
+
+  async listActiveSessions(userId: string): Promise<SessionRecord[]> {
+    return this.db.session.findMany({
+      where: { userId, revokedAt: null },
+      orderBy: { lastUsedAt: 'desc' },
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+    const result = await this.db.session.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count > 0;
   }
 }

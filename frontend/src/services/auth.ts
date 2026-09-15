@@ -49,8 +49,36 @@ export function getProfile(token?: string): Promise<UserType> {
 }
 
 export async function logout(): Promise<void> {
+  try {
+    await apiRequest('/auth/logout', { method: 'POST', auth: true });
+  } catch {
+    // Token may already be expired/invalid — clearing local state below still logs the user out.
+  }
   sessionStorage.removeItem('auth_token');
   sessionStorage.removeItem('refresh_token');
   localStorage.removeItem('auth_token');
   localStorage.removeItem('refresh_token');
+}
+
+export interface Session {
+  id: string;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  isCurrent: boolean;
+}
+
+export function listSessions(): Promise<Session[]> {
+  return apiRequest<Session[]>('/auth/sessions', {
+    method: 'GET',
+    auth: true,
+  });
+}
+
+export function revokeSession(sessionId: string): Promise<void> {
+  return apiRequest<void>(`/auth/sessions/${sessionId}`, {
+    method: 'DELETE',
+    auth: true,
+  });
 }

@@ -17,8 +17,23 @@ model User {
   updatedAt    DateTime        @updatedAt
   profile      ResumeProfile?
   versions     ResumeVersion[]
+  sessions     Session[]
 
   @@map("users")
+}
+
+model Session {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId, revokedAt])
+  @@map("sessions")
 }
 
 model ResumeProfile {
