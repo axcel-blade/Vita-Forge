@@ -106,6 +106,23 @@
   text-decoration: underline;
 }
 
+.dashboard-documents {
+  margin-top: 2.5rem;
+}
+
+.dashboard-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 1rem 0;
+}
+
+.dashboard-documents-empty {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 @media (max-width: 480px) {
   .dashboard-header {
     flex-direction: column;
