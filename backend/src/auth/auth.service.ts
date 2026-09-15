@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
-import { DATA_STORE, DataStore, StoredUserRecord } from '../repositories/data-store';
+import { DATA_STORE, DataStore, SessionMeta, SessionRecord, StoredUserRecord } from '../repositories/data-store';
 import { MemoryDataStore } from '../repositories/memory-data-store';
 
 export interface StoredUser {
@@ -27,10 +27,25 @@ export interface CurrentUserResponse {
   skills: string[];
 }
 
+export interface SessionResponse {
+  id: string;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  isCurrent: boolean;
+}
+
 interface TokenPayload {
   sub: string;
   email: string;
   typ: 'access' | 'refresh';
+  sid?: string;
+}
+
+interface ResolvedAuth {
+  user: StoredUser;
+  sessionId?: string;
 }
 
 @Injectable()
@@ -47,7 +62,10 @@ export class AuthService {
     this.store = store ?? new MemoryDataStore();
   }
 
-  async register(userData: { email: string; password: string; name?: string }): Promise<AuthTokenResponse> {
+  async register(
+    userData: { email: string; password: string; name?: string },
+    meta: SessionMeta = {},
+  ): Promise<AuthTokenResponse> {
     const { email, password, name = '' } = userData;
     const existing = await this.store.findUserByEmail(email);
     if (existing) {
@@ -61,26 +79,34 @@ export class AuthService {
       passwordHash: await bcrypt.hash(password, 10),
     });
 
-    return this.issueTokens(this.toStoredUser(user), 'Registration successful');
+    const session = await this.store.createSession(user.id, meta);
+    return this.issueTokens(this.toStoredUser(user), session.id, 'Registration successful');
   }
 
-  async login(loginData: { email: string; password: string }): Promise<AuthTokenResponse> {
+  async login(
+    loginData: { email: string; password: string },
+    meta: SessionMeta = {},
+  ): Promise<AuthTokenResponse> {
     const user = await this.store.findUserByEmail(loginData.email);
 
     if (!user || !(await bcrypt.compare(loginData.password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.issueTokens(this.toStoredUser(user), 'Login successful');
+    const session = await this.store.createSession(user.id, meta);
+    return this.issueTokens(this.toStoredUser(user), session.id, 'Login successful');
   }
 
   async refresh(refreshToken?: string): Promise<AuthTokenResponse> {
-    const user = await this.resolveUser(refreshToken, 'refresh');
-    return this.issueTokens(user, 'Token refreshed');
+    const { user, sessionId } = await this.resolveUser(refreshToken, 'refresh');
+    if (sessionId) {
+      await this.store.touchSession(sessionId);
+    }
+    return this.issueTokens(user, sessionId, 'Token refreshed');
   }
 
   async getMe(authorization?: string): Promise<CurrentUserResponse> {
-    const user = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
     return {
       id: user.id,
       email: user.email,
@@ -91,16 +117,37 @@ export class AuthService {
     };
   }
 
-  private issueTokens(user: StoredUser, message: string): AuthTokenResponse {
+  async logout(authorization?: string): Promise<void> {
+    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    if (sessionId) {
+      await this.store.revokeSession(user.id, sessionId);
+    }
+  }
+
+  async listSessions(authorization?: string): Promise<SessionResponse[]> {
+    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    const sessions = await this.store.listActiveSessions(user.id);
+    return sessions.map((session) => this.toSessionResponse(session, sessionId));
+  }
+
+  async revokeSession(authorization: string | undefined, sessionId: string): Promise<void> {
+    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+    const revoked = await this.store.revokeSession(user.id, sessionId);
+    if (!revoked) {
+      throw new UnauthorizedException('Session not found');
+    }
+  }
+
+  private issueTokens(user: StoredUser, sessionId: string | undefined, message: string): AuthTokenResponse {
     return {
       message,
       userId: user.id,
-      access_token: this.signToken(user, 'access'),
-      refresh_token: this.signToken(user, 'refresh'),
+      access_token: this.signToken(user, 'access', sessionId),
+      refresh_token: this.signToken(user, 'refresh', sessionId),
     };
   }
 
-  private async resolveUser(token: string | undefined, expectedType: TokenPayload['typ']): Promise<StoredUser> {
+  private async resolveUser(token: string | undefined, expectedType: TokenPayload['typ']): Promise<ResolvedAuth> {
     if (!token) {
       throw new UnauthorizedException(expectedType === 'refresh' ? 'Missing refresh token' : 'Missing token');
     }
@@ -118,7 +165,15 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      return this.toStoredUser(record);
+      // Tokens issued before session tracking have no `sid` — accept them without a session check.
+      if (payload.sid) {
+        const session = await this.store.getSession(payload.sid);
+        if (!session || session.revokedAt || session.userId !== record.id) {
+          throw new UnauthorizedException('Session revoked');
+        }
+      }
+
+      return { user: this.toStoredUser(record), sessionId: payload.sid };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -127,8 +182,8 @@ export class AuthService {
     }
   }
 
-  private signToken(user: StoredUser, typ: TokenPayload['typ']): string {
-    return jwt.sign({ sub: user.id, email: user.email, typ }, this.jwtSecret, {
+  private signToken(user: StoredUser, typ: TokenPayload['typ'], sessionId?: string): string {
+    return jwt.sign({ sub: user.id, email: user.email, typ, sid: sessionId }, this.jwtSecret, {
       expiresIn: typ === 'access' ? '15m' : '7d',
     });
   }
@@ -146,6 +201,17 @@ export class AuthService {
       email: user.email,
       name: user.name,
       password: user.passwordHash,
+    };
+  }
+
+  private toSessionResponse(session: SessionRecord, currentSessionId?: string): SessionResponse {
+    return {
+      id: session.id,
+      userAgent: session.userAgent,
+      ip: session.ip,
+      createdAt: session.createdAt.toISOString(),
+      lastUsedAt: session.lastUsedAt.toISOString(),
+      isCurrent: session.id === currentSessionId,
     };
   }
 }

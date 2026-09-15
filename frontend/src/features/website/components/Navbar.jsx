@@ -25,6 +25,18 @@ export default function Navbar() {
               </NavLink>
             </li>
           ))}
+          {!isLoading && isAuthenticated && (
+            <li>
+              <NavLink
+                to="/account/sessions"
+                className={({ isActive }) =>
+                  `text-sm font-medium ${isActive ? "text-sky-600" : "text-gray-600 hover:text-gray-900"}`
+                }
+              >
+                Sessions
+              </NavLink>
+            </li>
+          )}
           {!isLoading && (
             <li>
               {isAuthenticated ? (

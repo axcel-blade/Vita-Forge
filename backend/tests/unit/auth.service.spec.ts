@@ -132,4 +132,80 @@ describe('AuthService', () => {
       await expect(authService.refresh()).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
+
+  describe('sessions', () => {
+    it('records a session with device metadata on login', async () => {
+      await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+      const { access_token } = await authService.login(
+        { email: 'test@example.com', password: 'password123' },
+        { userAgent: 'jest-agent', ip: '127.0.0.1' },
+      );
+
+      const sessions = await authService.listSessions(`Bearer ${access_token}`);
+      expect(sessions).toHaveLength(2); // register + login each create a session
+      const current = sessions.find((s) => s.isCurrent);
+      expect(current?.userAgent).toBe('jest-agent');
+      expect(current?.ip).toBe('127.0.0.1');
+    });
+
+    it('marks the session used by the current token as current', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      const sessions = await authService.listSessions(`Bearer ${access_token}`);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].isCurrent).toBe(true);
+    });
+
+    it('revokes a session so its tokens stop working', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+      const [session] = await authService.listSessions(`Bearer ${access_token}`);
+
+      await authService.revokeSession(`Bearer ${access_token}`, session.id);
+
+      await expect(authService.getMe(`Bearer ${access_token}`)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects revoking a session that does not belong to the caller', async () => {
+      const { access_token: ownerToken } = await authService.register({
+        email: 'owner@example.com',
+        password: 'password123',
+        name: 'Owner',
+      });
+      const [ownerSession] = await authService.listSessions(`Bearer ${ownerToken}`);
+
+      const { access_token: attackerToken } = await authService.register({
+        email: 'attacker@example.com',
+        password: 'password123',
+        name: 'Attacker',
+      });
+
+      await expect(
+        authService.revokeSession(`Bearer ${attackerToken}`, ownerSession.id),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('logout revokes the current session only', async () => {
+      const { access_token } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await authService.logout(`Bearer ${access_token}`);
+
+      await expect(authService.getMe(`Bearer ${access_token}`)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
 });

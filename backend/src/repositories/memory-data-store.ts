@@ -1,6 +1,8 @@
 import {
   DataStore,
   ResumeVersionRecord,
+  SessionMeta,
+  SessionRecord,
   StoredProfileRecord,
   StoredUserRecord,
 } from './data-store';
@@ -10,6 +12,7 @@ export class MemoryDataStore implements DataStore {
   private readonly usersById = new Map<string, StoredUserRecord>();
   private readonly profiles = new Map<string, StoredProfileRecord>();
   private readonly versions = new Map<string, ResumeVersionRecord[]>();
+  private readonly sessionsById = new Map<string, SessionRecord>();
 
   async findUserByEmail(email: string): Promise<StoredUserRecord | null> {
     return this.usersByEmail.get(email) ?? null;
@@ -65,5 +68,46 @@ export class MemoryDataStore implements DataStore {
 
   async getVersion(userId: string, versionId: string): Promise<ResumeVersionRecord | null> {
     return (this.versions.get(userId) ?? []).find((entry) => entry.id === versionId) ?? null;
+  }
+
+  async createSession(userId: string, meta: SessionMeta): Promise<SessionRecord> {
+    const now = new Date();
+    const record: SessionRecord = {
+      id: crypto.randomUUID(),
+      userId,
+      userAgent: meta.userAgent ?? null,
+      ip: meta.ip ?? null,
+      createdAt: now,
+      lastUsedAt: now,
+      revokedAt: null,
+    };
+    this.sessionsById.set(record.id, record);
+    return record;
+  }
+
+  async getSession(sessionId: string): Promise<SessionRecord | null> {
+    return this.sessionsById.get(sessionId) ?? null;
+  }
+
+  async touchSession(sessionId: string): Promise<void> {
+    const session = this.sessionsById.get(sessionId);
+    if (session) {
+      session.lastUsedAt = new Date();
+    }
+  }
+
+  async listActiveSessions(userId: string): Promise<SessionRecord[]> {
+    return [...this.sessionsById.values()]
+      .filter((session) => session.userId === userId && !session.revokedAt)
+      .sort((a, b) => b.lastUsedAt.getTime() - a.lastUsedAt.getTime());
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+    const session = this.sessionsById.get(sessionId);
+    if (!session || session.userId !== userId || session.revokedAt) {
+      return false;
+    }
+    session.revokedAt = new Date();
+    return true;
   }
 }
