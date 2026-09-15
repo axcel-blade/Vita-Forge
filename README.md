@@ -124,7 +124,7 @@ cd ../backend && npm run build
 
 ## Docker
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose v2).
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose v2). New to the project? [docs/docker.md](docs/docker.md) has a full walkthrough with a cheat sheet — the commands below are the condensed version.
 
 **Start frontend + backend (in-memory API store)**
 
