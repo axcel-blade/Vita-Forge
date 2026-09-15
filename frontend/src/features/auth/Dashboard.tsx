@@ -130,30 +130,49 @@ export function DashboardPage() {
             You haven&apos;t created a resume or cover letter yet. Use the tools above to get started.
           </p>
         ) : (
-          <div className="dashboard-grid">
-            {resumes.map((doc) => (
-              <article key={doc.id} className="dashboard-card">
-                <h2>{doc.title}</h2>
-                <p>
-                  Resume · {formatUpdatedAt(doc.updatedAt)}
-                </p>
-                <Link to={`/apps/resume-builder/${doc.id}`} className="dashboard-card-link">
-                  Open resume
-                </Link>
-              </article>
-            ))}
-            {coverLetters.map((doc) => (
-              <article key={doc.id} className="dashboard-card">
-                <h2>{doc.title}</h2>
-                <p>
-                  Cover letter · {formatUpdatedAt(doc.updatedAt)}
-                </p>
-                <Link to={`/apps/cover-letter/${doc.id}`} className="dashboard-card-link">
-                  Open cover letter
-                </Link>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="dashboard-documents-group">
+              <h3 className="dashboard-subsection-title">Resumes</h3>
+              {resumes.length === 0 ? (
+                <p className="dashboard-documents-empty">No resumes yet.</p>
+              ) : (
+                <div className="dashboard-grid">
+                  {resumes.map((doc) => (
+                    <article key={doc.id} className="dashboard-card">
+                      <h2>{doc.title}</h2>
+                      <p>
+                        Resume · {formatUpdatedAt(doc.updatedAt)}
+                      </p>
+                      <Link to={`/apps/resume-builder/${doc.id}`} className="dashboard-card-link">
+                        Open resume
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="dashboard-documents-group">
+              <h3 className="dashboard-subsection-title">Cover letters</h3>
+              {coverLetters.length === 0 ? (
+                <p className="dashboard-documents-empty">No cover letters yet.</p>
+              ) : (
+                <div className="dashboard-grid">
+                  {coverLetters.map((doc) => (
+                    <article key={doc.id} className="dashboard-card">
+                      <h2>{doc.title}</h2>
+                      <p>
+                        Cover letter · {formatUpdatedAt(doc.updatedAt)}
+                      </p>
+                      <Link to={`/apps/cover-letter/${doc.id}`} className="dashboard-card-link">
+                        Open cover letter
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
     </section>

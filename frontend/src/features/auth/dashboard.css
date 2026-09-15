@@ -99,6 +99,21 @@
   margin: 0;
 }
 
+.dashboard-documents-group {
+  margin-bottom: 2rem;
+}
+
+.dashboard-documents-group:last-child {
+  margin-bottom: 0;
+}
+
+.dashboard-subsection-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+}
+
 @media (max-width: 480px) {
   .dashboard-header {
     flex-direction: column;
