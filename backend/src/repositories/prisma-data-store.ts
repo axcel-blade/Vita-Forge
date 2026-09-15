@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { SESSION_TTL_MS } from '../auth/session.constants';
 import {
   DataStore,
   ResumeVersionRecord,
@@ -135,11 +136,13 @@ export class PrismaDataStore implements DataStore {
   }
 
   async createSession(userId: string, meta: SessionMeta): Promise<SessionRecord> {
+    const now = new Date();
     const row = await this.db.session.create({
       data: {
         userId,
         userAgent: meta.userAgent ?? null,
         ip: meta.ip ?? null,
+        expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
       },
     });
     return row;
@@ -150,9 +153,11 @@ export class PrismaDataStore implements DataStore {
   }
 
   async touchSession(sessionId: string): Promise<void> {
+    // Sliding 30-day inactivity window: every authenticated use pushes expiry forward.
+    const now = new Date();
     await this.db.session.update({
       where: { id: sessionId },
-      data: { lastUsedAt: new Date() },
+      data: { lastUsedAt: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS) },
     });
   }
 

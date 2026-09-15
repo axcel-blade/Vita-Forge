@@ -11,7 +11,6 @@ services:
       - "3001:3001"
     environment:
       PORT: "3001"
-      JWT_SECRET: ${JWT_SECRET:-vita-forge-secret-key-change-in-production}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173}
       # Leave unset for in-memory store. Set DATABASE_URL (or use docker-compose.db.yml) for Postgres.
       DATABASE_URL: ${DATABASE_URL:-}

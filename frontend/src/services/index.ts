@@ -9,15 +9,9 @@ export {
   changePassword,
 } from './auth';
 export {
-  storeToken,
-  getStoredToken,
-  storeRefreshToken,
-  getRefreshToken,
-  clearToken,
   uploadProfile,
   getProfile as getUserProfile,
   deleteProfile,
-  isAuthenticated,
 } from './user';
 export { API_BASE_URL, API_TIMEOUT, API_CONFIG } from './config';
 export { apiRequest } from './http';

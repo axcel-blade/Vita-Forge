@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **Breaking:** Auth now relies on the backend's HttpOnly session cookie instead of storing `access_token`/`refresh_token` in `sessionStorage`/`localStorage`. `src/services/token.ts` is removed; `AuthProvider` resolves auth state by calling `GET /auth/me` (cookie sent automatically via `credentials: 'include'`) instead of holding a token in memory
+- `apiRequest` (`src/services/http.ts`) always sends `credentials: 'include'` and attaches the CSRF cookie value as an `X-CSRF-Token` header on mutating requests; a `401` on an authenticated request now clears auth state and lets `ProtectedRoute` redirect to `/login`, rather than attempting a token refresh
+- New `src/services/csrf.ts` reads the non-HttpOnly `vf_csrf` cookie for the double-submit CSRF header
+
 ### Added
 - Account panel on the home page for signed-in users (edit name/email, change password) instead of the marketing hero, with quick links to the dashboard, resume builder, cover letter writer, and active sessions
 - Post-login dashboard (`/dashboard`, unlocked once signed in): a tool launcher linking to the resume builder, template marketplace, cover letter writer, and active sessions, with a Dashboard link in the navbar

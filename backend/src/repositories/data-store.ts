@@ -25,6 +25,7 @@ export interface SessionRecord {
   ip: string | null;
   createdAt: Date;
   lastUsedAt: Date;
+  expiresAt: Date;
   revokedAt: Date | null;
 }
 

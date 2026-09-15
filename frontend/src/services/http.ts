@@ -1,51 +1,22 @@
 import { API_BASE_URL, API_CONFIG } from './config';
 import { ApiError } from './error-handling';
-import { getRefreshToken, getStoredToken, storeRefreshToken, storeToken, clearToken } from './token';
+import { getCsrfToken } from './csrf';
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   auth?: boolean;
-  _retried?: boolean;
 }
 
-let refreshInFlight: Promise<string | null> | null = null;
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', undefined]);
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    return null;
-  }
+/**
+ * Registered by AuthProvider so a 401 from any authenticated request can clear frontend
+ * auth state and redirect to /login, without http.ts depending on React/router directly.
+ */
+let unauthorizedHandler: (() => void) | null = null;
 
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-          signal: AbortSignal.timeout(API_CONFIG.timeout),
-        });
-        if (!response.ok) {
-          return null;
-        }
-        const payload = (await response.json()) as { access_token?: string; refresh_token?: string };
-        if (!payload.access_token) {
-          return null;
-        }
-        storeToken(payload.access_token);
-        if (payload.refresh_token) {
-          storeRefreshToken(payload.refresh_token);
-        }
-        return payload.access_token;
-      } catch {
-        return null;
-      } finally {
-        refreshInFlight = null;
-      }
-    })();
-  }
-
-  return refreshInFlight;
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
 }
 
 function toApiError(error: unknown): ApiError {
@@ -65,17 +36,18 @@ function toApiError(error: unknown): ApiError {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, auth = false, headers: initHeaders, signal, _retried, ...rest } = options;
+  const { body, auth = false, headers: initHeaders, signal, ...rest } = options;
   const headers = new Headers(initHeaders);
 
   if (body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  if (auth) {
-    const token = getStoredToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+  const method = (rest.method ?? 'GET').toUpperCase();
+  if (!SAFE_METHODS.has(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
     }
   }
 
@@ -84,6 +56,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...rest,
       headers,
+      // The session and CSRF cookies are HttpOnly/scoped — never read or sent manually.
+      credentials: 'include',
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: signal ?? AbortSignal.timeout(API_CONFIG.timeout),
     });
@@ -91,12 +65,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw toApiError(error);
   }
 
-  if (response.status === 401 && auth && !_retried && path !== '/auth/refresh') {
-    const nextToken = await refreshAccessToken();
-    if (nextToken) {
-      return apiRequest<T>(path, { ...options, _retried: true });
-    }
-    clearToken();
+  if (response.status === 401 && auth) {
+    unauthorizedHandler?.();
   }
 
   if (!response.ok) {

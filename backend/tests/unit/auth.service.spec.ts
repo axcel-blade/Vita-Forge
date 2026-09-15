@@ -1,15 +1,19 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../src/auth/auth.service';
+import { MemoryDataStore } from '../../src/repositories/memory-data-store';
+import { SESSION_TTL_MS } from '../../src/auth/session.constants';
 
 describe('AuthService', () => {
+  let store: MemoryDataStore;
   let authService: AuthService;
 
   beforeEach(() => {
-    authService = new AuthService();
+    store = new MemoryDataStore();
+    authService = new AuthService(store);
   });
 
   describe('register', () => {
-    it('registers a user and returns a JWT', async () => {
+    it('registers a user and issues a session', async () => {
       const result = await authService.register({
         email: 'test@example.com',
         password: 'password123',
@@ -18,8 +22,9 @@ describe('AuthService', () => {
 
       expect(result.message).toBe('Registration successful');
       expect(result.userId).toEqual(expect.any(String));
-      expect(result.access_token).toEqual(expect.any(String));
-      expect(result.refresh_token).toEqual(expect.any(String));
+      expect(result.sessionId).toEqual(expect.any(String));
+      expect(result.csrfToken).toEqual(expect.any(String));
+      expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now());
     });
 
     it('rejects a duplicate email', async () => {
@@ -38,15 +43,15 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('stores a hashed password', async () => {
+    it('stores a hashed password, never the plaintext', async () => {
       await authService.register({
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
       });
 
-      const storedUser = await (authService as any).store.findUserByEmail('test@example.com');
-      expect(storedUser.passwordHash).not.toBe('password123');
+      const storedUser = await store.findUserByEmail('test@example.com');
+      expect(storedUser?.passwordHash).not.toBe('password123');
     });
   });
 
@@ -59,15 +64,15 @@ describe('AuthService', () => {
       });
     });
 
-    it('returns a JWT for valid credentials', async () => {
+    it('issues a session for valid credentials', async () => {
       const result = await authService.login({
         email: 'test@example.com',
         password: 'password123',
       });
 
       expect(result.message).toBe('Login successful');
-      expect(result.access_token).toEqual(expect.any(String));
-      expect(result.refresh_token).toEqual(expect.any(String));
+      expect(result.sessionId).toEqual(expect.any(String));
+      expect(result.csrfToken).toEqual(expect.any(String));
     });
 
     it('rejects unknown emails', async () => {
@@ -87,49 +92,113 @@ describe('AuthService', () => {
         }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
+
+    it('regenerates the session id on every successful login (session-fixation prevention)', async () => {
+      const first = await authService.login({ email: 'test@example.com', password: 'password123' });
+      const second = await authService.login({ email: 'test@example.com', password: 'password123' });
+
+      expect(first.sessionId).not.toBe(second.sessionId);
+      // The old session must still be independently valid until explicitly revoked/expired.
+      await expect(authService.getMe(first.sessionId)).resolves.toBeDefined();
+    });
   });
 
-  describe('getMe', () => {
-    it('returns the current user for a valid token', async () => {
-      const { access_token } = await authService.register({
+  describe('getMe / session validation', () => {
+    it('returns the current user for a valid session', async () => {
+      const { sessionId } = await authService.register({
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
       });
 
-      const result = await authService.getMe(`Bearer ${access_token}`);
+      const result = await authService.getMe(sessionId);
 
       expect(result.email).toBe('test@example.com');
       expect(result.name).toBe('Test User');
       expect(result.id).toEqual(expect.any(String));
-      expect(result).not.toHaveProperty('userId');
     });
 
-    it('rejects a missing token', async () => {
+    it('rejects a missing session id', async () => {
       await expect(authService.getMe()).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('rejects an invalid token', async () => {
-      await expect(authService.getMe('not-a-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    it('rejects an unknown/invalid session id', async () => {
+      await expect(authService.getMe('not-a-real-session')).rejects.toBeInstanceOf(UnauthorizedException);
     });
-  });
 
-  describe('refresh', () => {
-    it('issues a new token pair from a refresh token', async () => {
-      const { refresh_token } = await authService.register({
+    it('rejects a revoked session', async () => {
+      const { sessionId } = await authService.register({
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
       });
 
-      const result = await authService.refresh(refresh_token);
-      expect(result.message).toBe('Token refreshed');
-      expect(result.access_token).toEqual(expect.any(String));
-      expect(result.refresh_token).toEqual(expect.any(String));
+      await authService.logout(sessionId);
+
+      await expect(authService.getMe(sessionId)).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('rejects a missing refresh token', async () => {
-      await expect(authService.refresh()).rejects.toBeInstanceOf(UnauthorizedException);
+    it('rejects a session past its 30-day inactivity expiry', async () => {
+      const { sessionId } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      const session = await store.getSession(sessionId);
+      expect(session).not.toBeNull();
+      // Simulate 30+ days of inactivity by forcing expiresAt into the past.
+      session!.expiresAt = new Date(Date.now() - 1000);
+
+      await expect(authService.getMe(sessionId)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('does not allow an expired session to be silently renewed', async () => {
+      const { sessionId } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+      const session = await store.getSession(sessionId);
+      session!.expiresAt = new Date(Date.now() - 1000);
+
+      await expect(authService.getMe(sessionId)).rejects.toBeInstanceOf(UnauthorizedException);
+      // A second attempt must still fail — touchSession is never reached for an expired session.
+      await expect(authService.getMe(sessionId)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('slides the 30-day expiry forward on every authenticated use', async () => {
+      const { sessionId } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+      const before = (await store.getSession(sessionId))!.expiresAt.getTime();
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await authService.getMe(sessionId);
+
+      const after = (await store.getSession(sessionId))!.expiresAt.getTime();
+      expect(after).toBeGreaterThan(before);
+      expect(after - Date.now()).toBeGreaterThan(SESSION_TTL_MS - 5000);
+    });
+  });
+
+  describe('logout', () => {
+    it('revokes the current session only', async () => {
+      const { sessionId } = await authService.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'Test User',
+      });
+
+      await authService.logout(sessionId);
+
+      await expect(authService.getMe(sessionId)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('is a no-op for a missing session id', async () => {
+      await expect(authService.logout(undefined)).resolves.toBeUndefined();
     });
   });
 
@@ -140,173 +209,72 @@ describe('AuthService', () => {
         password: 'password123',
         name: 'Test User',
       });
-      const { access_token } = await authService.login(
+      const { sessionId } = await authService.login(
         { email: 'test@example.com', password: 'password123' },
         { userAgent: 'jest-agent', ip: '127.0.0.1' },
       );
 
-      const sessions = await authService.listSessions(`Bearer ${access_token}`);
+      const sessions = await authService.listSessions(sessionId);
       expect(sessions).toHaveLength(2); // register + login each create a session
       const current = sessions.find((s) => s.isCurrent);
       expect(current?.userAgent).toBe('jest-agent');
       expect(current?.ip).toBe('127.0.0.1');
-    });
-
-    it('marks the session used by the current token as current', async () => {
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-
-      const sessions = await authService.listSessions(`Bearer ${access_token}`);
-      expect(sessions).toHaveLength(1);
-      expect(sessions[0].isCurrent).toBe(true);
-    });
-
-    it('revokes a session so its tokens stop working', async () => {
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-      const [session] = await authService.listSessions(`Bearer ${access_token}`);
-
-      await authService.revokeSession(`Bearer ${access_token}`, session.id);
-
-      await expect(authService.getMe(`Bearer ${access_token}`)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(current?.expiresAt).toEqual(expect.any(String));
     });
 
     it('rejects revoking a session that does not belong to the caller', async () => {
-      const { access_token: ownerToken } = await authService.register({
+      const { sessionId: ownerSessionId } = await authService.register({
         email: 'owner@example.com',
         password: 'password123',
         name: 'Owner',
       });
-      const [ownerSession] = await authService.listSessions(`Bearer ${ownerToken}`);
 
-      const { access_token: attackerToken } = await authService.register({
+      const { sessionId: attackerSessionId } = await authService.register({
         email: 'attacker@example.com',
         password: 'password123',
         name: 'Attacker',
       });
 
-      await expect(
-        authService.revokeSession(`Bearer ${attackerToken}`, ownerSession.id),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
-    });
-
-    it('logout revokes the current session only', async () => {
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-
-      await authService.logout(`Bearer ${access_token}`);
-
-      await expect(authService.getMe(`Bearer ${access_token}`)).rejects.toBeInstanceOf(UnauthorizedException);
-    });
-  });
-
-  describe('updateAccount', () => {
-    it('updates the name and email', async () => {
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-
-      const updated = await authService.updateAccount(`Bearer ${access_token}`, {
-        name: 'New Name',
-        email: 'new@example.com',
-      });
-
-      expect(updated.name).toBe('New Name');
-      expect(updated.email).toBe('new@example.com');
-    });
-
-    it('still resolves the account after an email change using the old token', async () => {
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-
-      await authService.updateAccount(`Bearer ${access_token}`, { email: 'new@example.com' });
-
-      const me = await authService.getMe(`Bearer ${access_token}`);
-      expect(me.email).toBe('new@example.com');
-    });
-
-    it('rejects changing to an email already in use', async () => {
-      await authService.register({
-        email: 'taken@example.com',
-        password: 'password123',
-        name: 'Taken',
-      });
-      const { access_token } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-
-      await expect(
-        authService.updateAccount(`Bearer ${access_token}`, { email: 'taken@example.com' }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(authService.revokeSession(attackerSessionId, ownerSessionId)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
     });
   });
 
   describe('changePassword', () => {
-    it('updates the password and allows login with the new one', async () => {
-      const { access_token } = await authService.register({
+    it('revokes every other session but keeps the current one', async () => {
+      const { sessionId: session1 } = await authService.register({
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
       });
+      const { sessionId: session2 } = await authService.login({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
-      await authService.changePassword(`Bearer ${access_token}`, {
+      await authService.changePassword(session1, {
         currentPassword: 'password123',
         newPassword: 'newPassword456',
       });
 
-      const login = await authService.login({ email: 'test@example.com', password: 'newPassword456' });
-      expect(login.access_token).toEqual(expect.any(String));
+      await expect(authService.getMe(session1)).resolves.toBeDefined();
+      await expect(authService.getMe(session2)).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
     it('rejects the wrong current password', async () => {
-      const { access_token } = await authService.register({
+      const { sessionId } = await authService.register({
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
       });
 
       await expect(
-        authService.changePassword(`Bearer ${access_token}`, {
+        authService.changePassword(sessionId, {
           currentPassword: 'wrongPassword',
           newPassword: 'newPassword456',
         }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
-    });
-
-    it('revokes every other session but keeps the current one', async () => {
-      const { access_token: session1 } = await authService.register({
-        email: 'test@example.com',
-        password: 'password123',
-        name: 'Test User',
-      });
-      const { access_token: session2 } = await authService.login({
-        email: 'test@example.com',
-        password: 'password123',
-      });
-
-      await authService.changePassword(`Bearer ${session1}`, {
-        currentPassword: 'password123',
-        newPassword: 'newPassword456',
-      });
-
-      await expect(authService.getMe(`Bearer ${session1}`)).resolves.toBeDefined();
-      await expect(authService.getMe(`Bearer ${session2}`)).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 });

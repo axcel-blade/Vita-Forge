@@ -1,14 +1,5 @@
 import { apiRequest } from './http';
 
-export {
-  storeToken,
-  getStoredToken,
-  storeRefreshToken,
-  getRefreshToken,
-  clearToken,
-  isAuthenticated,
-} from './token';
-
 export interface SyncedProfile {
   resume?: Record<string, unknown>;
   coverLetter?: Record<string, unknown>;

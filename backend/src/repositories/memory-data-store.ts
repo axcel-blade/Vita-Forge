@@ -1,3 +1,4 @@
+import { SESSION_TTL_MS } from '../auth/session.constants';
 import {
   DataStore,
   ResumeVersionRecord,
@@ -96,6 +97,7 @@ export class MemoryDataStore implements DataStore {
       ip: meta.ip ?? null,
       createdAt: now,
       lastUsedAt: now,
+      expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
       revokedAt: null,
     };
     this.sessionsById.set(record.id, record);
@@ -109,7 +111,10 @@ export class MemoryDataStore implements DataStore {
   async touchSession(sessionId: string): Promise<void> {
     const session = this.sessionsById.get(sessionId);
     if (session) {
-      session.lastUsedAt = new Date();
+      // Sliding 30-day inactivity window: every authenticated use pushes expiry forward.
+      const now = new Date();
+      session.lastUsedAt = now;
+      session.expiresAt = new Date(now.getTime() + SESSION_TTL_MS);
     }
   }
 

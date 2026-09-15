@@ -4,12 +4,10 @@ import {
   register as registerRequest,
   getProfile as fetchAuthProfile,
   logout as logoutRequest,
-  refresh as refreshRequest,
-  type AuthResponse,
   type LoginData,
   type RegisterData,
 } from './auth';
-import { clearToken, getRefreshToken, getStoredToken, storeRefreshToken, storeToken } from './token';
+import { setUnauthorizedHandler } from './http';
 import { isApiError } from './error-handling';
 import { syncLocalBundleAfterAuth } from './profile-sync';
 import { enableRemoteProfileMode } from '../features/shared/services/profileBundle';
@@ -17,9 +15,8 @@ import type { User as UserType } from '../types/user';
 
 interface AuthContextType {
   user: UserType | null;
-  token: string | null;
-  login: (data: LoginData) => Promise<AuthResponse>;
-  register: (data: RegisterData) => Promise<AuthResponse>;
+  login: (data: LoginData) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: UserType) => void;
   isAuthenticated: boolean;
@@ -36,56 +33,28 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
-function persistSession(response: AuthResponse) {
-  storeToken(response.access_token);
-  storeRefreshToken(response.refresh_token);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserType | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Any authenticated request that comes back 401 (missing/expired/invalid session cookie)
+  // clears local state so ProtectedRoute redirects to /login.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      enableRemoteProfileMode(false);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   useEffect(() => {
     async function initializeAuth() {
-      let accessToken = getStoredToken();
-      const refreshToken = getRefreshToken();
-
-      if (!accessToken && refreshToken) {
-        try {
-          const refreshed = await refreshRequest(refreshToken);
-          persistSession(refreshed);
-          accessToken = refreshed.access_token;
-        } catch {
-          clearToken();
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (!accessToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      setToken(accessToken);
+      // The HttpOnly session cookie (if any) is sent automatically — this either resolves
+      // with the current user (valid, unexpired session) or throws a 401 (none/expired/invalid).
       try {
-        setUser(await fetchAuthProfile(accessToken));
+        setUser(await fetchAuthProfile());
         await syncLocalBundleAfterAuth();
       } catch {
-        if (refreshToken) {
-          try {
-            const refreshed = await refreshRequest(refreshToken);
-            persistSession(refreshed);
-            setToken(refreshed.access_token);
-            setUser(await fetchAuthProfile(refreshed.access_token));
-            return;
-          } catch {
-            // fall through
-          }
-        }
-        clearToken();
-        setToken(null);
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -95,27 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void initializeAuth();
   }, []);
 
-  const login = async (data: LoginData): Promise<AuthResponse> => {
+  const login = async (data: LoginData): Promise<void> => {
     try {
-      const response = await loginRequest(data);
-      persistSession(response);
-      setToken(response.access_token);
-      setUser(await fetchAuthProfile(response.access_token));
+      await loginRequest(data);
+      setUser(await fetchAuthProfile());
       await syncLocalBundleAfterAuth();
-      return response;
     } catch (error: unknown) {
       throw new Error(isApiError(error) ? error.message : 'Login failed');
     }
   };
 
-  const register = async (data: RegisterData): Promise<AuthResponse> => {
+  const register = async (data: RegisterData): Promise<void> => {
     try {
-      const response = await registerRequest(data);
-      persistSession(response);
-      setToken(response.access_token);
-      setUser(await fetchAuthProfile(response.access_token));
+      await registerRequest(data);
+      setUser(await fetchAuthProfile());
       await syncLocalBundleAfterAuth();
-      return response;
     } catch (error: unknown) {
       throw new Error(isApiError(error) ? error.message : 'Registration failed');
     }
@@ -123,9 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async (): Promise<void> => {
     await logoutRequest();
-    clearToken();
     enableRemoteProfileMode(false);
-    setToken(null);
     setUser(null);
   };
 
@@ -133,12 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        token,
         login,
         register,
         logout,
         setUser,
-        isAuthenticated: Boolean(token && user),
+        isAuthenticated: Boolean(user),
         isLoading,
       }}
     >

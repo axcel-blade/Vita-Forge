@@ -4,8 +4,6 @@ import type { User as UserType } from '../types/user';
 export interface AuthResponse {
   message: string;
   userId: string;
-  access_token: string;
-  refresh_token: string;
 }
 
 export interface LoginData {
@@ -33,18 +31,11 @@ export function login(data: LoginData): Promise<AuthResponse> {
   });
 }
 
-export function refresh(refreshToken: string): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>('/auth/refresh', {
-    method: 'POST',
-    body: { refresh_token: refreshToken },
-  });
-}
-
-export function getProfile(token?: string): Promise<UserType> {
+/** Relies on the HttpOnly session cookie; resolves the current user or rejects with a 401 ApiError. */
+export function getProfile(): Promise<UserType> {
   return apiRequest<UserType>('/auth/me', {
     method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    auth: !token,
+    auth: true,
   });
 }
 
@@ -52,12 +43,8 @@ export async function logout(): Promise<void> {
   try {
     await apiRequest('/auth/logout', { method: 'POST', auth: true });
   } catch {
-    // Token may already be expired/invalid — clearing local state below still logs the user out.
+    // Session may already be expired/invalid — clearing local state below still logs the user out.
   }
-  sessionStorage.removeItem('auth_token');
-  sessionStorage.removeItem('refresh_token');
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('refresh_token');
 }
 
 export interface Session {
@@ -66,6 +53,7 @@ export interface Session {
   ip: string | null;
   createdAt: string;
   lastUsedAt: string;
+  expiresAt: string;
   isCurrent: boolean;
 }
 

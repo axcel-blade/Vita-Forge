@@ -100,7 +100,7 @@ Optional Postgres: `docker compose -f docker-compose.yml -f docker-compose.db.ym
 
 ## Configuration
 
-Use `frontend/.env` for `VITE_*` values and `backend/.env` for `PORT`, `JWT_SECRET`, `DATABASE_URL`, and `ANTHROPIC_API_KEY`. Never put server secrets in frontend env files.
+Use `frontend/.env` for `VITE_*` values and `backend/.env` for `PORT`, `DATABASE_URL`, and `ANTHROPIC_API_KEY`. Never put server secrets in frontend env files.
 
 ## First Steps
 
