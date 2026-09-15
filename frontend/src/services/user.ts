@@ -1,8 +1,16 @@
 import { apiRequest } from './http';
 
+export interface SyncedProfileDocument {
+  id: string;
+  title: string;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SyncedProfile {
-  resume?: Record<string, unknown>;
-  coverLetter?: Record<string, unknown>;
+  resumes?: SyncedProfileDocument[];
+  coverLetters?: SyncedProfileDocument[];
 }
 
 export interface UserProfileResponse {

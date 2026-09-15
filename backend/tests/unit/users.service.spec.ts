@@ -2,6 +2,18 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../src/auth/auth.service';
 import { UsersService } from '../../src/users/users.service';
 
+const NOW = new Date().toISOString();
+
+function makeResumeDoc(fullName: string) {
+  return {
+    id: 'resume-1',
+    title: fullName,
+    data: { profile: { fullName } },
+    createdAt: NOW,
+    updatedAt: NOW,
+  };
+}
+
 describe('UsersService', () => {
   let authService: AuthService;
   let usersService: UsersService;
@@ -24,15 +36,15 @@ describe('UsersService', () => {
     expect(result.profile).toBeNull();
   });
 
-  it('creates and reads a resume profile', async () => {
+  it('creates and reads a resume document', async () => {
     const created = await usersService.upsertProfile(sessionId, {
-      resume: { profile: { fullName: 'Ada Lovelace' } },
+      resumes: [makeResumeDoc('Ada Lovelace')],
     });
 
-    expect(created.profile?.resume).toEqual({ profile: { fullName: 'Ada Lovelace' } });
+    expect(created.profile?.resumes).toEqual([makeResumeDoc('Ada Lovelace')]);
 
     const fetched = await usersService.getProfile(sessionId);
-    expect(fetched.profile?.resume).toEqual({ profile: { fullName: 'Ada Lovelace' } });
+    expect(fetched.profile?.resumes).toEqual([makeResumeDoc('Ada Lovelace')]);
   });
 
   it('rejects unauthenticated profile access', async () => {
@@ -41,13 +53,13 @@ describe('UsersService', () => {
 
   it('creates a restore point and rolls the profile back', async () => {
     await usersService.upsertProfile(sessionId, {
-      resume: { profile: { fullName: 'Ada Lovelace' } },
+      resumes: [makeResumeDoc('Ada Lovelace')],
     });
     const version = await usersService.createVersion(sessionId, 'checkpoint');
     await usersService.upsertProfile(sessionId, {
-      resume: { profile: { fullName: 'Changed' } },
+      resumes: [makeResumeDoc('Changed')],
     });
     const restored = await usersService.restoreVersion(sessionId, version.id);
-    expect(restored.profile?.resume).toEqual({ profile: { fullName: 'Ada Lovelace' } });
+    expect(restored.profile?.resumes).toEqual([makeResumeDoc('Ada Lovelace')]);
   });
 });

@@ -2,65 +2,96 @@
  * Dashboard Page Component
  */
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth-context';
-import { getProfile, type SyncedProfile } from '../../services/user';
+import { useToast } from '../../components/Toast';
+import { formatErrorMessage } from '../../services/error-handling';
+import {
+  createCoverLetter,
+  createResume,
+  listCoverLetters,
+  listResumes,
+  type ProfileDocument,
+} from '../../services/documents';
 import './dashboard.css';
 
 const tools = [
   {
     title: 'Resume Builder',
     description: 'Edit sections, preview A4 layout, and export your resume.',
-    to: '/apps/resume-builder',
-    action: 'Open builder',
+    action: 'Create resume',
   },
   {
     title: 'Cover Letter Writer',
     description: 'Draft a role-focused letter using your saved profile details.',
-    to: '/apps/cover-letter',
-    action: 'Open writer',
+    action: 'Create cover letter',
   },
 ];
 
-function getResumeTitle(resume: Record<string, unknown> | undefined): string {
-  const profile = resume?.profile as Record<string, unknown> | undefined;
-  const fullName = typeof profile?.fullName === 'string' ? profile.fullName.trim() : '';
-  return fullName || 'Untitled resume';
-}
-
-function getCoverLetterTitle(coverLetter: Record<string, unknown> | undefined): string {
-  const jobTitle = typeof coverLetter?.jobTitle === 'string' ? coverLetter.jobTitle.trim() : '';
-  const companyName = typeof coverLetter?.companyName === 'string' ? coverLetter.companyName.trim() : '';
-  if (jobTitle && companyName) return `${jobTitle} at ${companyName}`;
-  return jobTitle || companyName || 'Untitled cover letter';
+function formatUpdatedAt(isoDate: string): string {
+  try {
+    return `Updated ${new Date(isoDate).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })}`;
+  } catch {
+    return 'Updated recently';
+  }
 }
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const toast = useToast();
   const greetingName = user?.name?.trim() || 'there';
-  const [profile, setProfile] = useState<SyncedProfile | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [resumes, setResumes] = useState<ProfileDocument[]>([]);
+  const [coverLetters, setCoverLetters] = useState<ProfileDocument[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [creating, setCreating] = useState<'resume' | 'coverLetter' | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    getProfile()
-      .then((response) => {
-        if (!cancelled) setProfile(response.profile);
-      })
-      .catch(() => {
-        if (!cancelled) setProfile(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingProfile(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const loadDocuments = useCallback(async () => {
+    setLoadingDocuments(true);
+    try {
+      const [resumeDocs, coverLetterDocs] = await Promise.all([listResumes(), listCoverLetters()]);
+      setResumes(resumeDocs);
+      setCoverLetters(coverLetterDocs);
+    } catch (error) {
+      toast.error(formatErrorMessage(error));
+    } finally {
+      setLoadingDocuments(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const hasResume = Boolean(profile?.resume);
-  const hasCoverLetter = Boolean(profile?.coverLetter);
+  useEffect(() => {
+    void loadDocuments();
+  }, [loadDocuments]);
+
+  const handleCreateResume = async () => {
+    setCreating('resume');
+    try {
+      const doc = await createResume();
+      navigate(`/apps/resume-builder/${doc.id}`);
+    } catch (error) {
+      toast.error(formatErrorMessage(error));
+      setCreating(null);
+    }
+  };
+
+  const handleCreateCoverLetter = async () => {
+    setCreating('coverLetter');
+    try {
+      const doc = await createCoverLetter();
+      navigate(`/apps/cover-letter/${doc.id}`);
+    } catch (error) {
+      toast.error(formatErrorMessage(error));
+      setCreating(null);
+    }
+  };
+
+  const hasDocuments = resumes.length > 0 || coverLetters.length > 0;
 
   return (
     <section className="dashboard-page">
@@ -73,44 +104,55 @@ export function DashboardPage() {
 
       <div className="dashboard-grid">
         {tools.map((tool) => (
-          <article key={tool.to} className="dashboard-card">
+          <article key={tool.title} className="dashboard-card">
             <h2>{tool.title}</h2>
             <p>{tool.description}</p>
-            <Link to={tool.to} className="dashboard-card-link">
-              {tool.action}
-            </Link>
+            <button
+              type="button"
+              className="dashboard-card-link"
+              onClick={tool.title === 'Resume Builder' ? handleCreateResume : handleCreateCoverLetter}
+              disabled={creating !== null}
+            >
+              {creating === (tool.title === 'Resume Builder' ? 'resume' : 'coverLetter')
+                ? 'Creating…'
+                : tool.action}
+            </button>
           </article>
         ))}
       </div>
 
       <div className="dashboard-documents">
         <h2 className="dashboard-section-title">Your documents</h2>
-        {loadingProfile ? (
+        {loadingDocuments ? (
           <p className="dashboard-documents-empty">Loading your documents…</p>
-        ) : !hasResume && !hasCoverLetter ? (
+        ) : !hasDocuments ? (
           <p className="dashboard-documents-empty">
             You haven&apos;t created a resume or cover letter yet. Use the tools above to get started.
           </p>
         ) : (
           <div className="dashboard-grid">
-            {hasResume && (
-              <article className="dashboard-card">
-                <h2>{getResumeTitle(profile?.resume)}</h2>
-                <p>Resume</p>
-                <Link to="/apps/resume-builder" className="dashboard-card-link">
+            {resumes.map((doc) => (
+              <article key={doc.id} className="dashboard-card">
+                <h2>{doc.title}</h2>
+                <p>
+                  Resume · {formatUpdatedAt(doc.updatedAt)}
+                </p>
+                <Link to={`/apps/resume-builder/${doc.id}`} className="dashboard-card-link">
                   Open resume
                 </Link>
               </article>
-            )}
-            {hasCoverLetter && (
-              <article className="dashboard-card">
-                <h2>{getCoverLetterTitle(profile?.coverLetter)}</h2>
-                <p>Cover letter</p>
-                <Link to="/apps/cover-letter" className="dashboard-card-link">
+            ))}
+            {coverLetters.map((doc) => (
+              <article key={doc.id} className="dashboard-card">
+                <h2>{doc.title}</h2>
+                <p>
+                  Cover letter · {formatUpdatedAt(doc.updatedAt)}
+                </p>
+                <Link to={`/apps/cover-letter/${doc.id}`} className="dashboard-card-link">
                   Open cover letter
                 </Link>
               </article>
-            )}
+            ))}
           </div>
         )}
       </div>

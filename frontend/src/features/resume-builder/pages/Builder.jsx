@@ -1,7 +1,7 @@
 /* src/features/resume-builder/pages/Builder.jsx */
 
 import React, { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Toolbar from "../components/Toolbar";
 import { useToast } from "../../../components/Toast";
 import { useKeyboardShortcuts } from "../../../utils/keyboardShortcuts";
@@ -11,67 +11,72 @@ import TemplateModern from "../components/templates/TemplateModern";
 import TemplateBasic from "../components/templates/TemplateBasic";
 import { defaultData } from "../../../constants/defaultData";
 import { applyMarketplaceTemplate } from "../../../constants/templates";
-import { readProfileBundle, writeProfileBundle } from "../../shared/services/profileBundle";
-import { useAuth } from "../../../services/auth-context";
-import { pullRemoteProfile, pushRemoteProfile } from "../../../services/profile-sync";
+import { writeProfileBundle } from "../../shared/services/profileBundle";
+import { createResume, getResume, saveResume } from "../../../services/documents";
+import { formatErrorMessage } from "../../../services/error-handling";
 
 export default function Builder() {
   const [data, setData] = useState(defaultData);
-  const [syncing, setSyncing] = useState(false);
+  const [syncing, setSyncing] = useState(true);
   const [syncError, setSyncError] = useState("");
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
+  const navigate = useNavigate();
   const previewRef = useRef(null);
   const skipNextPush = useRef(true);
   const lastGoodRef = useRef(defaultData);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const toast = useToast();
 
   const set = (patch) => setData((prev) => ({ ...prev, ...patch }));
 
   useEffect(() => {
-    const bundle = readProfileBundle();
-    let next = bundle.resume || defaultData;
-    const templateId = searchParams.get("template");
-    if (templateId) {
-      next = { ...next, meta: applyMarketplaceTemplate(next.meta, templateId) };
-    }
-    setData(next);
-    lastGoodRef.current = next;
-  }, []);
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) {
-      return;
-    }
-
     let cancelled = false;
+
+    if (!id) {
+      createResume()
+        .then((doc) => {
+          if (!cancelled) navigate(`/apps/resume-builder/${doc.id}`, { replace: true });
+        })
+        .catch((error) => {
+          if (!cancelled) setSyncError(formatErrorMessage(error));
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setSyncing(true);
     setSyncError("");
-    pullRemoteProfile().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.resume) {
+    getResume(id)
+      .then((doc) => {
+        if (cancelled) return;
+        let next = doc ? doc.data : defaultData;
+        const templateId = searchParams.get("template");
+        if (templateId) {
+          next = { ...next, meta: applyMarketplaceTemplate(next.meta, templateId) };
+        }
         skipNextPush.current = true;
-        setData(result.resume);
-        lastGoodRef.current = result.resume;
-      }
-      if (result.error) {
-        setSyncError(result.error);
-      }
-      setSyncing(false);
-    });
+        setData(next);
+        lastGoodRef.current = next;
+        writeProfileBundle({ resume: next });
+      })
+      .catch((error) => {
+        if (!cancelled) setSyncError(formatErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setSyncing(false);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isAuthenticated]);
+  }, [id]);
 
   useEffect(() => {
-    writeProfileBundle({ resume: data });
-    if (!isAuthenticated) {
+    if (!id) {
       return;
     }
+    writeProfileBundle({ resume: data });
     if (skipNextPush.current) {
       skipNextPush.current = false;
       return;
@@ -80,33 +85,32 @@ export default function Builder() {
     const snapshot = data;
     const timer = window.setTimeout(() => {
       setSyncing(true);
-      pushRemoteProfile(snapshot, readProfileBundle().coverLetter).then((result) => {
-        setSyncing(false);
-        if (result.error) {
-          setSyncError(result.error);
-          toast.error(result.error);
+      saveResume(id, snapshot)
+        .then(() => {
+          lastGoodRef.current = snapshot;
+          setSyncError("");
+        })
+        .catch((error) => {
+          const message = formatErrorMessage(error);
+          setSyncError(message);
+          toast.error(message);
           skipNextPush.current = true;
           setData(lastGoodRef.current);
           writeProfileBundle({ resume: lastGoodRef.current });
-          return;
-        }
-        lastGoodRef.current = snapshot;
-        setSyncError("");
-      });
+        })
+        .finally(() => setSyncing(false));
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [data, isAuthenticated]);
+  }, [data, id]);
 
   useKeyboardShortcuts(
     {
       "ctrl+s": () => {
-        if (!isAuthenticated) {
-          toast.info("Sign in to save your changes");
-        }
+        toast.info("Changes save automatically");
       },
     },
-    [isAuthenticated, data]
+    [data]
   );
 
   const getTemplateComponent = () => {
@@ -117,9 +121,7 @@ export default function Builder() {
 
   return (
     <section className="mx-auto max-w-[1700px] p-4">
-      {authLoading || syncing ? (
-        <p className="mt-2 text-sm text-sky-700">Saving…</p>
-      ) : null}
+      {syncing ? <p className="mt-2 text-sm text-sky-700">Saving…</p> : null}
       {syncError ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
           {syncError}

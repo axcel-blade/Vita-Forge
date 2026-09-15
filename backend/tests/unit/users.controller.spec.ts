@@ -19,11 +19,11 @@ describe('UsersController', () => {
   beforeEach(() => {
     usersService = {
       getProfile: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: null }),
-      upsertProfile: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resume: {} } }),
+      upsertProfile: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resumes: [] } }),
       deleteProfile: jest.fn().mockResolvedValue(undefined),
       listVersions: jest.fn().mockResolvedValue([]),
       createVersion: jest.fn().mockResolvedValue({ id: 'v1', label: null, createdAt: new Date().toISOString() }),
-      restoreVersion: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resume: {} } }),
+      restoreVersion: jest.fn().mockResolvedValue({ user: { id: '1' }, profile: { resumes: [] } }),
     };
     controller = new UsersController(usersService as unknown as UsersService);
   });
@@ -34,7 +34,17 @@ describe('UsersController', () => {
   });
 
   it('creates or updates a profile payload', async () => {
-    const body = { resume: { profile: { fullName: 'Ada' } } };
+    const body = {
+      resumes: [
+        {
+          id: 'r1',
+          title: 'Ada',
+          data: { profile: { fullName: 'Ada' } },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    };
     await controller.updateProfile(fakeRequest('sess-1'), body);
     expect(usersService.upsertProfile).toHaveBeenCalledWith('sess-1', body);
   });
