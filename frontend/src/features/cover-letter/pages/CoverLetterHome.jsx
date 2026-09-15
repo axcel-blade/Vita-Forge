@@ -1,6 +1,7 @@
 /* src/apps/cover-letter/pages/CoverLetterHome.jsx */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import CoverLetterForm from "../components/CoverLetterForm";
 import CoverLetterPreview from "../components/CoverLetterPreview";
 import { buildCoverLetter } from "../services/buildCoverLetter";
@@ -12,8 +13,8 @@ import {
   writeProfileBundle,
 } from "../../shared/services/profileBundle";
 import { defaultCoverLetterData, defaultData } from "../../../constants/defaultData";
-import { useAuth } from "../../../services/auth-context";
-import { pullRemoteProfile, pushRemoteProfile } from "../../../services/profile-sync";
+import { createCoverLetter, getCoverLetter, saveCoverLetter } from "../../../services/documents";
+import { formatErrorMessage } from "../../../services/error-handling";
 
 const initialForm = defaultCoverLetterData;
 
@@ -57,78 +58,82 @@ export default function CoverLetterHome() {
   const fileInputRef = useRef(null);
   const skipNextPush = useRef(true);
   const lastGoodRef = useRef(initialForm);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { id } = useParams();
+  const navigate = useNavigate();
 
   const letter = useMemo(() => buildCoverLetter(formData), [formData]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    if (!id) {
+      createCoverLetter()
+        .then((doc) => {
+          if (!cancelled) navigate(`/apps/cover-letter/${doc.id}`, { replace: true });
+        })
+        .catch((error) => {
+          if (!cancelled) setSyncError(formatErrorMessage(error));
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const bundle = readProfileBundle();
     const resumeIdentity = bundle.resume ? extractResumeIdentity(bundle.resume) : null;
     setHasResumeIdentity(
       Boolean(resumeIdentity?.fullName || resumeIdentity?.email || resumeIdentity?.phone),
     );
-    if (bundle.coverLetter) {
-      const next = { ...initialForm, ...bundle.coverLetter, ...resumeIdentity };
-      setFormData(next);
-      lastGoodRef.current = next;
-      return;
-    }
-    if (bundle.resume) {
-      const next = deriveFromResume(bundle.resume);
-      setFormData(next);
-      lastGoodRef.current = next;
-      return;
-    }
-    setFormData(defaultCoverLetterData);
-  }, []);
 
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) {
-      return;
-    }
-    let cancelled = false;
-    pullRemoteProfile().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.coverLetter) {
+    getCoverLetter(id)
+      .then((doc) => {
+        if (cancelled) return;
+        let next;
+        if (doc) {
+          next = { ...initialForm, ...doc.data, ...resumeIdentity };
+        } else if (bundle.resume) {
+          next = deriveFromResume(bundle.resume);
+        } else {
+          next = defaultCoverLetterData;
+        }
         skipNextPush.current = true;
-        setFormData((prev) => ({ ...prev, ...result.coverLetter }));
-        lastGoodRef.current = { ...lastGoodRef.current, ...result.coverLetter };
-      }
-      if (result.error) {
-        setSyncError(result.error);
-      }
-    });
+        setFormData(next);
+        lastGoodRef.current = next;
+        writeProfileBundle({ coverLetter: next });
+      })
+      .catch((error) => {
+        if (!cancelled) setSyncError(formatErrorMessage(error));
+      });
+
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isAuthenticated]);
+  }, [id]);
 
   useEffect(() => {
-    writeProfileBundle({ coverLetter: formData });
-    if (!isAuthenticated) {
+    if (!id) {
       return;
     }
+    writeProfileBundle({ coverLetter: formData });
     if (skipNextPush.current) {
       skipNextPush.current = false;
       return;
     }
     const snapshot = formData;
     const timer = window.setTimeout(() => {
-      pushRemoteProfile(readProfileBundle().resume, snapshot).then((result) => {
-        if (result.error) {
-          setSyncError(result.error);
+      saveCoverLetter(id, snapshot)
+        .then(() => {
+          lastGoodRef.current = snapshot;
+          setSyncError("");
+        })
+        .catch((error) => {
+          setSyncError(formatErrorMessage(error));
           skipNextPush.current = true;
           setFormData(lastGoodRef.current);
-          return;
-        }
-        lastGoodRef.current = snapshot;
-        setSyncError("");
-      });
+        });
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [formData, isAuthenticated]);
+  }, [formData, id]);
 
   const handleSavePdf = () => {
     try {

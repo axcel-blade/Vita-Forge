@@ -5,9 +5,17 @@ export interface StoredUserRecord {
   passwordHash: string;
 }
 
+export interface StoredProfileDocument {
+  id: string;
+  title: string;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredProfileRecord {
-  resume?: Record<string, unknown>;
-  coverLetter?: Record<string, unknown>;
+  resumes?: StoredProfileDocument[];
+  coverLetters?: StoredProfileDocument[];
 }
 
 export interface ResumeVersionRecord {

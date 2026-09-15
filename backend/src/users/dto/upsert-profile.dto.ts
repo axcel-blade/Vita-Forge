@@ -1,11 +1,18 @@
-import { IsObject, IsOptional } from 'class-validator';
+import 'reflect-metadata';
+import { Type } from 'class-transformer';
+import { IsArray, IsOptional, ValidateNested } from 'class-validator';
+import { ProfileDocumentDto } from './profile-document.dto';
 
 export class UpsertProfileDto {
   @IsOptional()
-  @IsObject()
-  resume?: Record<string, unknown>;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProfileDocumentDto)
+  resumes?: ProfileDocumentDto[];
 
   @IsOptional()
-  @IsObject()
-  coverLetter?: Record<string, unknown>;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProfileDocumentDto)
+  coverLetters?: ProfileDocumentDto[];
 }

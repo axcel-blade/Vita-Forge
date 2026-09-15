@@ -198,6 +198,17 @@ export default function AppRoutes() {
           }, { protected: true })}
         />
         <Route
+          path="/apps/resume-builder/:id"
+          element={withSeo(Builder, {
+            title: "Resume Builder",
+            path: "/apps/resume-builder",
+            description:
+              "Build and edit your resume with structured sections, live preview, and export-ready formatting.",
+            type: "article",
+            robots: "noindex, nofollow",
+          }, { protected: true })}
+        />
+        <Route
           path="/apps/resume-builder/templates"
           element={withSeo(Templates, {
             title: "Template marketplace",
@@ -238,6 +249,17 @@ export default function AppRoutes() {
                 },
               ],
             },
+          }, { protected: true })}
+        />
+        <Route
+          path="/apps/cover-letter/:id"
+          element={withSeo(CoverLetterHome, {
+            title: "Cover Letter Writer",
+            path: "/apps/cover-letter",
+            description:
+              "Create role-focused cover letters with guided inputs, live preview, and PDF export-ready formatting.",
+            type: "article",
+            robots: "noindex, nofollow",
           }, { protected: true })}
         />
       </Route>

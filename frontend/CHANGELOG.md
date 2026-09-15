@@ -29,6 +29,10 @@
 
 ### Added
 - Dashboard "Your documents" section that loads the signed-in user's saved profile (`GET /users/profile`) and shows a card for their resume and cover letter, each linking back into the matching editor
+- Multiple resumes and cover letters per account: Dashboard "Create resume"/"Create cover letter" always start a new blank document, and "Your documents" now lists every saved resume and cover letter (sorted by most recently updated) instead of a single one of each — new `src/services/documents.ts` (list/get/create/save), `/apps/resume-builder/:id` and `/apps/cover-letter/:id` routes, and `Builder.jsx`/`CoverLetterHome.jsx` now load and autosave the document matching the route's `:id`
+
+### Changed
+- **Breaking:** `SyncedProfile` (`src/services/user.ts`) now stores `resumes`/`coverLetters` arrays of `{ id, title, data, createdAt, updatedAt }` instead of single `resume`/`coverLetter` objects; `src/services/profile-sync.ts` no longer pulls/pushes a singular resume or cover letter
 
 ## [0.8.0] - 2026-09-05
 
