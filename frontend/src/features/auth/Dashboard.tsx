@@ -51,7 +51,7 @@ export function DashboardPage() {
           <p>Choose a tool to continue your application workflow.</p>
         </div>
         <div className="dashboard-header-actions">
-          <Link to="/" className="dashboard-account-link">
+          <Link to="/account/settings" className="dashboard-account-link">
             Account settings
           </Link>
           <button type="button" className="dashboard-logout" onClick={() => void handleLogout()}>

@@ -3,10 +3,11 @@
 import React, { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
+import AppLayout from "../layouts/AppLayout";
 import Seo from "../components/Seo";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { SITE_NAME, SITE_URL } from "../constants/seo";
-import { LoginPage, RegisterPage, SessionsPage, DashboardPage } from "../features/auth";
+import { LoginPage, RegisterPage, SessionsPage, DashboardPage, AccountPanel } from "../features/auth";
 
 const Home = lazy(() => import("../features/website/pages/Home"));
 const About = lazy(() => import("../features/website/pages/About"));
@@ -53,22 +54,6 @@ export default function AppRoutes() {
         {/* Auth Routes (Public) */}
         <Route path="/login" element={withSeo(LoginPage, { title: "Login", path: "/login" })} />
         <Route path="/register" element={withSeo(RegisterPage, { title: "Register", path: "/register" })} />
-        <Route
-          path="/account/sessions"
-          element={withSeo(SessionsPage, {
-            title: "Active Sessions",
-            path: "/account/sessions",
-            robots: "noindex, nofollow",
-          }, { protected: true })}
-        />
-        <Route
-          path="/dashboard"
-          element={withSeo(DashboardPage, {
-            title: "Dashboard",
-            path: "/dashboard",
-            robots: "noindex, nofollow",
-          }, { protected: true })}
-        />
 
         {/* Website Pages (Public) */}        <Route
           path="/"
@@ -152,6 +137,44 @@ export default function AppRoutes() {
           })}
         />
         <Route
+          path="*"
+          element={withSeo(NotFound, {
+            title: "Page Not Found",
+            path: "/404",
+            description:
+              "The page you requested could not be found. Return to Vita Forge home or browse available products.",
+            robots: "noindex, nofollow",
+          })}
+        />
+      </Route>
+
+      {/* App (Authenticated) */}
+      <Route element={<AppLayout />}>
+        <Route
+          path="/dashboard"
+          element={withSeo(DashboardPage, {
+            title: "Dashboard",
+            path: "/dashboard",
+            robots: "noindex, nofollow",
+          }, { protected: true })}
+        />
+        <Route
+          path="/account/settings"
+          element={withSeo(AccountPanel, {
+            title: "Account Settings",
+            path: "/account/settings",
+            robots: "noindex, nofollow",
+          }, { protected: true })}
+        />
+        <Route
+          path="/account/sessions"
+          element={withSeo(SessionsPage, {
+            title: "Active Sessions",
+            path: "/account/sessions",
+            robots: "noindex, nofollow",
+          }, { protected: true })}
+        />
+        <Route
           path="/apps/resume-builder"
           element={withSeo(Builder, {
             title: "Resume Builder",
@@ -216,16 +239,6 @@ export default function AppRoutes() {
               ],
             },
           }, { protected: true })}
-        />
-        <Route
-          path="*"
-          element={withSeo(NotFound, {
-            title: "Page Not Found",
-            path: "/404",
-            description:
-              "The page you requested could not be found. Return to Vita Forge home or browse available products.",
-            robots: "noindex, nofollow",
-          })}
         />
       </Route>
     </Routes>
