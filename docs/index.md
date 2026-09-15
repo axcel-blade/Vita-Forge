@@ -15,6 +15,7 @@ Welcome to **Vita Forge's** local documentation repository! This directory conta
 
 - **[API Documentation](./api/index.md)** - Complete REST API reference
 - **[Getting Started Guide](./guide/getting-started.md)** - New user tutorial
+- **[Docker Guide](./docker.md)** - Running, seeding, and debugging the app with Docker Compose
 - **[Developer Guide](./developer-guide.md)** - For contributing developers
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 
