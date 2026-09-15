@@ -199,10 +199,6 @@ export default function CoverLetterHome() {
 
   return (
     <section className="mx-auto max-w-[1700px] p-4">
-      <h1 className="text-3xl font-bold text-gray-900">Cover Letter Writer</h1>
-      <p className="mt-2 max-w-3xl text-gray-600">
-        Create a focused, role-specific draft letter by filling in your details and experience highlights.
-      </p>
       {syncError ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
           {syncError}
