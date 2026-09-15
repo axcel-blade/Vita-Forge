@@ -15,6 +15,8 @@ describe('AuthController', () => {
     logout: jest.Mock;
     listSessions: jest.Mock;
     revokeSession: jest.Mock;
+    updateAccount: jest.Mock;
+    changePassword: jest.Mock;
   };
 
   beforeEach(() => {
@@ -26,6 +28,8 @@ describe('AuthController', () => {
       logout: jest.fn(),
       listSessions: jest.fn(),
       revokeSession: jest.fn(),
+      updateAccount: jest.fn(),
+      changePassword: jest.fn(),
     };
     controller = new AuthController(authService as unknown as AuthService);
   });
@@ -79,5 +83,19 @@ describe('AuthController', () => {
   it('delegates revokeSession', async () => {
     await controller.revokeSession('Bearer jwt-token', 'session-1');
     expect(authService.revokeSession).toHaveBeenCalledWith('Bearer jwt-token', 'session-1');
+  });
+
+  it('delegates updateAccount', async () => {
+    const patch = { name: 'New Name' };
+    authService.updateAccount.mockResolvedValue({ id: '1', name: 'New Name' });
+
+    await controller.updateAccount('Bearer jwt-token', patch);
+    expect(authService.updateAccount).toHaveBeenCalledWith('Bearer jwt-token', patch);
+  });
+
+  it('delegates changePassword', async () => {
+    const body = { currentPassword: 'old', newPassword: 'newPassword1' };
+    await controller.changePassword('Bearer jwt-token', body);
+    expect(authService.changePassword).toHaveBeenCalledWith('Bearer jwt-token', body);
   });
 });

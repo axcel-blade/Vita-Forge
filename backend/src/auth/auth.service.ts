@@ -1,4 +1,10 @@
-import { ConflictException, Inject, Injectable, Optional, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Optional,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { DATA_STORE, DataStore, SessionMeta, SessionRecord, StoredUserRecord } from '../repositories/data-store';
@@ -136,6 +142,60 @@ export class AuthService {
     if (!revoked) {
       throw new UnauthorizedException('Session not found');
     }
+  }
+
+  async updateAccount(
+    authorization: string | undefined,
+    patch: { name?: string; email?: string },
+  ): Promise<CurrentUserResponse> {
+    const { user } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+
+    if (patch.email && patch.email !== user.email) {
+      const existing = await this.store.findUserByEmail(patch.email);
+      if (existing && existing.id !== user.id) {
+        throw new ConflictException('Email is already in use');
+      }
+    }
+
+    const updatePayload: Partial<Pick<StoredUserRecord, 'name' | 'email'>> = {};
+    if (patch.name !== undefined) {
+      updatePayload.name = patch.name;
+    }
+    if (patch.email !== undefined) {
+      updatePayload.email = patch.email;
+    }
+
+    const updated = await this.store.updateUser(user.id, updatePayload);
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name || 'Demo User',
+      avatar: null,
+      bio: '',
+      skills: [],
+    };
+  }
+
+  async changePassword(
+    authorization: string | undefined,
+    body: { currentPassword: string; newPassword: string },
+  ): Promise<void> {
+    const { user, sessionId } = await this.resolveUser(this.extractBearerToken(authorization), 'access');
+
+    // `user.password` holds the stored hash (see toStoredUser).
+    const valid = await bcrypt.compare(body.currentPassword, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(body.newPassword, 10);
+    await this.store.updateUser(user.id, { passwordHash });
+
+    // Changing the password is a security-sensitive action — sign out every other device.
+    const sessions = await this.store.listActiveSessions(user.id);
+    await Promise.all(
+      sessions.filter((session) => session.id !== sessionId).map((session) => this.store.revokeSession(user.id, session.id)),
+    );
   }
 
   private issueTokens(user: StoredUser, sessionId: string | undefined, message: string): AuthTokenResponse {

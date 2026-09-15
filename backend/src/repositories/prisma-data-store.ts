@@ -57,6 +57,14 @@ export class PrismaDataStore implements DataStore {
     return asUser(row);
   }
 
+  async updateUser(
+    id: string,
+    patch: Partial<Pick<StoredUserRecord, 'name' | 'email' | 'passwordHash'>>,
+  ): Promise<StoredUserRecord> {
+    const row = await this.db.user.update({ where: { id }, data: patch });
+    return asUser(row);
+  }
+
   async getProfile(userId: string): Promise<StoredProfileRecord | null> {
     const row = await this.db.resumeProfile.findUnique({ where: { userId } });
     return row ? asProfile(row.payload) : null;

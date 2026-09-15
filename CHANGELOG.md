@@ -10,6 +10,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Account settings on the home page: signed-in users see an account panel (edit name/email, change password) instead of the marketing hero, plus quick links to the dashboard, resume builder, cover letter writer, and active sessions. Backend: `PATCH /auth/account` and `POST /auth/change-password` (the latter revokes every other active session as a security measure).
+- Post-login dashboard (`/dashboard`, "unlocked" once signed in): a tool launcher linking to the resume builder, template marketplace, cover letter writer, and active sessions, with a Dashboard link in the navbar.
 - User session management: login/register now create a tracked `Session` record (device user agent, IP, last-active time). New `GET /auth/sessions` and `DELETE /auth/sessions/:id` endpoints list and revoke sessions, and `POST /auth/logout` revokes the current session server-side. Access/refresh tokens carry a `sid` claim checked against the session store, so a revoked session's tokens stop working immediately. Frontend: new `/account/sessions` page to view and revoke active sessions, linked from the navbar.
 - `docs/docker.md`: a new-developer Docker guide covering everyday commands, seeding, database inspection, migrations, and the "stale container / empty `DATABASE_URL`" pitfall, with a cheat-sheet table. Linked from `README.md`, `docs/index.md`, and `docs/getting-started.md`.
 - Root `vercel.json` for a multi-service Vercel deploy: Vite frontend plus Nest backend (`entrypoint` `src/main.ts`), with `/api` rewritten to the backend and all other routes to the frontend.

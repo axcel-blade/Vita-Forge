@@ -28,6 +28,23 @@ export class MemoryDataStore implements DataStore {
     return user;
   }
 
+  async updateUser(
+    id: string,
+    patch: Partial<Pick<StoredUserRecord, 'name' | 'email' | 'passwordHash'>>,
+  ): Promise<StoredUserRecord> {
+    const existing = this.usersById.get(id);
+    if (!existing) {
+      throw new Error('User not found');
+    }
+    const next = { ...existing, ...patch };
+    this.usersById.set(id, next);
+    if (patch.email && patch.email !== existing.email) {
+      this.usersByEmail.delete(existing.email);
+    }
+    this.usersByEmail.set(next.email, next);
+    return next;
+  }
+
   async getProfile(userId: string): Promise<StoredProfileRecord | null> {
     return this.profiles.get(userId) ?? null;
   }

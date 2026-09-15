@@ -38,6 +38,7 @@ export interface DataStore {
   findUserByEmail(email: string): Promise<StoredUserRecord | null>;
   findUserById(id: string): Promise<StoredUserRecord | null>;
   createUser(user: StoredUserRecord): Promise<StoredUserRecord>;
+  updateUser(id: string, patch: Partial<Pick<StoredUserRecord, 'name' | 'email' | 'passwordHash'>>): Promise<StoredUserRecord>;
   getProfile(userId: string): Promise<StoredProfileRecord | null>;
   upsertProfile(userId: string, profile: StoredProfileRecord): Promise<StoredProfileRecord>;
   deleteProfile(userId: string): Promise<void>;

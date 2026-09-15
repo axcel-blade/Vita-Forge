@@ -6,7 +6,7 @@ import MainLayout from "../layouts/MainLayout";
 import Seo from "../components/Seo";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { SITE_NAME, SITE_URL } from "../constants/seo";
-import { LoginPage, RegisterPage, SessionsPage } from "../features/auth";
+import { LoginPage, RegisterPage, SessionsPage, DashboardPage } from "../features/auth";
 
 const Home = lazy(() => import("../features/website/pages/Home"));
 const About = lazy(() => import("../features/website/pages/About"));
@@ -58,6 +58,14 @@ export default function AppRoutes() {
           element={withSeo(SessionsPage, {
             title: "Active Sessions",
             path: "/account/sessions",
+            robots: "noindex, nofollow",
+          }, { protected: true })}
+        />
+        <Route
+          path="/dashboard"
+          element={withSeo(DashboardPage, {
+            title: "Dashboard",
+            path: "/dashboard",
             robots: "noindex, nofollow",
           }, { protected: true })}
         />

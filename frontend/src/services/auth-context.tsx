@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<AuthResponse>;
   register: (data: RegisterData) => Promise<AuthResponse>;
   logout: () => Promise<void>;
+  setUser: (user: UserType) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -136,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        setUser,
         isAuthenticated: Boolean(token && user),
         isLoading,
       }}

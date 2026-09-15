@@ -73,6 +73,7 @@ export const Controller = (_path?: string) => (target: unknown) => target;
 export const Post = (_path?: string) => () => undefined;
 export const Get = (_path?: string) => () => undefined;
 export const Delete = (_path?: string) => () => undefined;
+export const Patch = (_path?: string) => () => undefined;
 export const Body = () => () => undefined;
 export const HttpCode = (_code?: number) => () => undefined;
 export const UseGuards = (..._guards: unknown[]) => () => undefined;
