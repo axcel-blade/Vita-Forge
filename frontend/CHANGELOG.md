@@ -12,6 +12,9 @@
 ### Changed
 - Moved Resume Builder-only components (editors, preview, templates, toolbar) from `src/components/` into `src/features/resume-builder/components/`; `src/components/` now holds only cross-feature shared pieces (`ErrorBoundary`, `Seo`, `Toast`, `TemplateSharedParts`)
 
+### Fixed
+- Converted `src/features/auth/ProfileMenu.jsx` and `AppNavbar.jsx` to TypeScript (`.tsx`), fixing a `tsc -b` failure (`TS7016`) that broke the frontend Docker build
+
 ## [0.8.0] - 2026-09-05
 
 - nginx Docker image for the production Vite build (`docker/frontend.Dockerfile`)
